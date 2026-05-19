@@ -1,0 +1,26 @@
+# Build outputs
+bin/
+obj/
+out/
+
+# User secrets
+appsettings.Development.json
+appsettings.Production.json
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Uploads (user content)
+wwwroot/uploads/*
+!wwwroot/uploads/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

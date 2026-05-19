@@ -1,0 +1,208 @@
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <title>@(ViewBag.Title ?? "Bangalore Education")</title>
+    <meta name="description" content="@(ViewBag.Description ?? "")" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="BangaloreEducation.com">
+    <meta name="robots" content="noindex,follow">
+
+    <!-- Fonts & Icons -->
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700&display=swap" rel="stylesheet">
+    <!-- Styles -->
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="/assets/css/selectize.css">
+<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="/css/viewer.css">
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+    <!-- Canonical URL -->
+   @{
+    var request = HttpContextAccessor.HttpContext.Request;
+
+    var canonicalUrl = ViewBag.Canonical != null
+        ? $"{request.Scheme}://{request.Host}{ViewBag.Canonical}"
+        : $"{request.Scheme}://{request.Host}{request.Path}";
+}
+<link rel="canonical" href="@canonicalUrl">
+
+
+@if (ViewBag.CurrentPage != null && ViewBag.TotalPages != null)
+{
+    if (ViewBag.CurrentPage > 1)
+    {
+        <link rel="prev" href="?page=@(ViewBag.CurrentPage - 1)" />
+    }
+    if (ViewBag.CurrentPage < ViewBag.TotalPages)
+    {
+        <link rel="next" href="?page=@(ViewBag.CurrentPage + 1)" />
+    }
+}
+</head>
+<body class="page-sub-page">
+<!-- Wrapper -->
+<div class="wrapper">
+
+    <!-- Header -->
+    <div class="navigation-wrapper">
+        <!-- Secondary Navigation -->
+        <div class="secondary-navigation-wrapper">
+            <div class="container">
+                <div class="navigation-contact pull-left">
+                    Call Us: <span class="opacity-70">+91 98863 77748</span>
+                </div>
+                <ul class="secondary-navigation list-unstyled pull-right">
+                    <li><a href="/contact/">Contact Us</a></li>
+                    <li><a href="https://blog.bangaloreeducation.com/">Blog</a></li>
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <li><a asp-controller="Account" asp-action="Logout">Log Out</a></li>
+                        <li>Hello, @User.Identity.Name</li>
+                    }
+                    else
+                    {
+                        <li><a asp-controller="Account" asp-action="Login">Log In</a></li>
+                        <li><a asp-controller="Account" asp-action="Register">Register</a></li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <!-- Primary Navigation -->
+        <div class="primary-navigation-wrapper">
+            <header class="navbar" id="top">
+                <div class="container">
+                    <div class="navbar-header">
+                        <button class="navbar-toggle" type="button" data-toggle="collapse" data-target=".bs-navbar-collapse">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                        <div class="navbar-brand nav" id="brand">
+                            <a href="/"><img src="/assets/img/bangalore-education-com-logo.webp" alt="BangaloreEducation.com"></a>
+                        </div>
+                    </div>
+                    @await Html.PartialAsync("_Nav")
+                    
+            <form method="get" action="/Search/Index" class="search-bar">
+                <div class="search-wrapper">
+
+                    <i class="fa fa-search search-icon"></i>
+
+                    <input type="text" id="searchBox" name="q"
+                        placeholder="Search schools, DPS, NPS, locality..."
+                        autocomplete="off">
+
+                    <button type="submit">Search</button>
+
+                </div>
+            </form>
+                </div>
+            </header>
+        </div>
+    </div>
+    <!-- End Header -->
+
+    <!-- Breadcrumbs -->
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                @if (ViewBag.Board != null && ViewBag.City != null)
+                    {
+                        <li class="breadcrumb-item active">
+                            @ViewBag.Board.ToString().ToUpper() Schools in @ViewBag.City
+                        </li>
+                    }
+            </ol>
+        </nav>
+    </div>
+    <!-- End Breadcrumbs -->
+    <p>&nbsp;</p>
+    <!-- Page Content -->
+    <div id="page-content">
+        <div class="container">
+            <div class="row">
+            @{
+            var path = Context.Request.Path.Value?.ToLower();
+            bool isHomePage = path == "/" || path == "/home" || path == "/home/index";
+
+            var mainClass = isHomePage ? "col-md-12" : "col-md-8";
+            }
+                <!-- MAIN Content -->
+                <div class="@mainClass">
+                    <div id="page-main">
+                        <section id="right-sidebar">                                                      			
+                            @RenderBody()
+</section> </div><!-- /#page-main --> </div><!-- /.col-md-8 -->               
+                
+   <!-- Sidebar content here -->                       
+                        @if (!isHomePage)
+                        {
+                            @await Html.PartialAsync("_Sidebar")
+                        }
+  </div><!-- /.row --> </div><!-- /.container --> </div> <!-- end Page Content -->
+    <!-- End Page Content -->
+
+    <!-- Footer -->
+    @await Html.PartialAsync("_Footer")
+
+</div> <!-- /.wrapper -->
+
+@RenderSection("Scripts", required: false)
+<!-- Existing page content -->
+
+<!-- ✅ MODAL START -->
+<div id="myModal" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">Enter Your Details</div>
+            <div class="modal-body">
+
+                <!-- ✅ NEW FORM HERE -->
+                <form id="enquiryForm">
+
+                    <input type="hidden" id="rcpt_val">
+                    <input type="hidden" id="page_URL">
+                    <input type="hidden" id="institute_id">
+
+                    <input type="text" id="name" placeholder="Your Name" required>
+                    <input type="email" id="email" placeholder="Email" required>
+                    <input type="text" id="course" placeholder="Course" required>
+                    <input type="text" id="phone" placeholder="Contact" required>
+                    <textarea id="message" placeholder="Message"></textarea>
+
+                    <button type="submit" class="btn btn-primary">Send Message</button>
+                    <button type="button" id="close_form">X</button>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ SUCCESS MODAL -->
+<div id="msg_popup" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Message Sent</h4>
+            </div>
+
+            <div class="modal-body">
+                <p id="msg_content"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
