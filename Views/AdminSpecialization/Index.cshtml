@@ -1,0 +1,78 @@
+@model List<SchoolProject.Models.Courses.Specialization>
+
+@{
+ViewData["Title"] = "Specializations";
+Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container-fluid">
+
+<div class="d-flex justify-content-between mb-3">
+    <h2>Specializations</h2>
+
+    <a href="/AdminSpecialization/Create"
+       class="btn btn-primary">
+        Add Specialization
+    </a>
+</div>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Course</th>
+            <th>Specialization</th>
+            <th>Slug</th>
+            <th>Active</th>
+            <th>Deprecated</th>
+            <th width="180"></th>
+        </tr>
+    </thead>
+
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.SpecializationId</td>
+
+            <td>
+                @(item.Course?.CourseName ?? "")
+            </td>
+
+            <td>
+                @item.SpecializationName
+            </td>
+
+            <td>
+                @item.SpecializationSlug
+            </td>
+
+            <td>
+                @item.IsActive
+            </td>
+
+            <td>
+                @item.IsDeprecated
+            </td>
+
+            <td>
+                <a class="btn btn-sm btn-warning"
+                   href="/AdminSpecialization/Edit/@item.SpecializationId">
+                    Edit
+                </a>
+
+                @if (!item.IsDeprecated)
+                {
+                    <a class="btn btn-sm btn-secondary"
+                       href="/AdminSpecialization/Delete/@item.SpecializationId"
+                       onclick="return confirm('Deprecate this specialization?');">
+                        Deprecate
+                    </a>
+                }
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+</div>

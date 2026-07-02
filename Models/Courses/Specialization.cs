@@ -24,10 +24,17 @@ namespace SchoolProject.Models.Courses
         public string? SpecializationSlug { get; set; }
 
         [Column("is_active")]
-        public bool IsActive { get; set; } = true;
+		public bool IsActive { get; set; } = true;
 
-        // Navigation
-        public Course? Course { get; set; }
-        public ICollection<CollegeCourse>? CollegeCourses { get; set; }
+		[Column("specialization_type")]
+		[StringLength(50)]
+		public string? SpecializationType { get; set; }
+
+		[Column("is_deprecated")]
+		public bool IsDeprecated { get; set; }
+
+		// Navigation
+		public Course? Course { get; set; }
+		public ICollection<CollegeCourse>? CollegeCourses { get; set; }
     }
 }

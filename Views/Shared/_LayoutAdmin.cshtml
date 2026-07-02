@@ -347,7 +347,27 @@
 					<span>Enquiries</span>
 					</a>
 				</li>
+				
+				<!-- Course Management -->
+				<li class="sidebar-section">Courses</li>
 
+				<li>
+					<a href="/AdminCourse"
+					   class="@(Context.Request.Path.Value?.ToLower().StartsWith("/admincourse") == true ? "active" : "")">
+						<i class="bi bi-book"></i>
+						<span>Manage Courses</span>
+					</a>
+				</li>
+
+				<li>
+					<a href="/AdminSpecialization"
+					   class="@(Context.Request.Path.Value?.ToLower().StartsWith("/adminspecialization") == true ? "active" : "")">
+						<i class="bi bi-diagram-3"></i>
+						<span>Specializations</span>
+					</a>
+				</li>		
+				
+				
 				<!-- Content Section -->
 				<li class="sidebar-section">Content</li>
 				<li>

@@ -167,10 +167,18 @@ else if (!string.IsNullOrEmpty(Model.MetaDescription))
                                     {<br/><small class="text-muted">@cc.Course.Level.LevelName</small>}
                                 </td>
                                 <td>
-                                    @if (cc.SpecializationNav != null && !string.IsNullOrEmpty(cc.SpecializationNav.SpecializationName))
-                                    { @cc.SpecializationNav.SpecializationName }
-                                    else
-                                    { <span class="text-muted">-</span> }
+                                @if (!string.IsNullOrWhiteSpace(cc.OriginalCourseName))
+                                {
+                                    @cc.OriginalCourseName
+                                }
+                                else if (cc.SpecializationNav != null)
+                                {
+                                    @cc.SpecializationNav.SpecializationName
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
                                 </td>
                                 <td>@(string.IsNullOrEmpty(cc.FeesStructure) ? "-" : cc.FeesStructure)</td>
                                 <td>@(string.IsNullOrEmpty(cc.CourseDuration) ? "-" : cc.CourseDuration)</td>

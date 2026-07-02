@@ -1,0 +1,164 @@
+@model SchoolProject.Models.StudyAbroad.IntlInstitute
+
+@{
+    ViewData["Title"] = "Courses for " + Model.InstituteName;
+    var courses = (IEnumerable<SchoolProject.Models.StudyAbroad.CourseIntl>)ViewBag.Courses;
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["Success"]
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["Error"]
+    </div>
+}
+<h2>Courses for @Model.InstituteName</h2>
+
+<hr />
+
+<h4>Add course to this institute</h4>
+
+<form asp-action="AddInstituteCourse"
+      asp-controller="AdminStudyAbroadCourse"
+      asp-route-instituteId="@Model.InstituteId"
+      method="post">
+
+    <div class="form-row">
+        <div class="form-group col-md-4">
+            <label>Course</label>
+            <select name="CourseId" class="form-control">
+                <option value="">-- Select Course --</option>
+                @foreach (var c in courses)
+                {
+                    <option value="@c.CourseId">@c.CourseName</option>
+                }
+            </select>
+        </div>
+
+        <div class="form-group col-md-2">
+            <label>Duration (years)</label>
+            <input name="DurationYears" class="form-control" />
+        </div>
+
+        <div class="form-group col-md-2">
+            <label>Duration (text)</label>
+            <input name="DurationText" class="form-control" />
+        </div>
+
+        <div class="form-group col-md-2">
+            <label>Cost (min)</label>
+            <input name="CostMin" class="form-control" />
+        </div>
+
+        <div class="form-group col-md-2">
+            <label>Cost (max)</label>
+            <input name="CostMax" class="form-control" />
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group col-md-3">
+            <label>Cost per</label>
+            <input name="CostPer" class="form-control" placeholder="year / semester" />
+        </div>
+
+        <div class="form-group col-md-3">
+            <label>Currency</label>
+            <input name="CostCurrency" class="form-control" placeholder="USD / GBP" />
+        </div>
+
+        <div class="form-group col-md-3">
+            <div class="form-check mt-4">
+                <input type="checkbox" name="IsApproximateCost" value="true" class="form-check-input" />
+                <label class="form-check-label">Approximate</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Raw HTML (optional)</label>
+        <textarea name="RawHtml" class="form-control" rows="3"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Add Course</button>
+</form>
+
+<hr />
+
+<h4>Existing courses</h4>
+
+@if (Model.InstituteCourses == null || !Model.InstituteCourses.Any())
+{
+    <p>No courses mapped to this institute yet.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Course</th>
+                <th>Level</th>
+                <th>Duration</th>
+                <th>Cost</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var ic in Model.InstituteCourses)
+        {
+            <tr>
+                <td>@ic.Course.CourseName</td>
+                <td>@ic.Course.Level?.LevelName</td>
+                <td>
+                    @if (!string.IsNullOrWhiteSpace(ic.DurationText))
+                    {
+                        @ic.DurationText
+                    }
+                    else if (ic.DurationYears.HasValue)
+                    {
+                        @($"{ic.DurationYears.Value} years")
+                    }
+                </td>
+                <td>
+                    @if (ic.CostMin.HasValue || ic.CostMax.HasValue)
+                    {
+                        var currency = string.IsNullOrWhiteSpace(ic.CostCurrency) ? "Rs" : ic.CostCurrency;
+
+                        if (ic.CostMin.HasValue && ic.CostMax.HasValue && ic.CostMin != ic.CostMax)
+                        {
+                            @($"{currency} {ic.CostMin:N0} – {ic.CostMax:N0}")
+                        }
+                        else if (ic.CostMin.HasValue)
+                        {
+                            @($"{currency} {ic.CostMin:N0}")
+                        }
+                        else if (ic.CostMax.HasValue)
+                        {
+                            @($"{currency} {ic.CostMax:N0}")
+                        }
+
+                        if (ic.IsApproximateCost == true)
+                        {
+                            @(" (approx)")
+                        }
+                    }
+                </td>
+                <td>
+                    <form asp-action="DeleteInstituteCourse"
+                          asp-controller="AdminStudyAbroadCourse"
+                          asp-route-id="@ic.InstituteCourseId"
+                          method="post"
+                          onsubmit="return confirm('Remove this course from the institute?');">
+                        <button type="submit" class="btn btn-danger btn-sm">X</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

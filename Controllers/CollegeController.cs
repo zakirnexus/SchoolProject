@@ -8,6 +8,8 @@ using SchoolProject.Data;
 using SchoolProject.Models.Colleges;
 using SchoolProject.Models.Courses;
 using SchoolProject.Services;
+using SchoolProject.Services.Education;
+using SchoolProject.Services.Education.Resolvers;
 
 namespace SchoolProject.Controllers
 {
@@ -29,6 +31,8 @@ namespace SchoolProject.Controllers
     public class CollegeController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IListingService _listingService;
+        private readonly ICityResolver _cityResolver;
         private readonly ContentService _contentService;
         private readonly EmailService _emailService;
         private readonly ReCaptchaService _recaptchaService;
@@ -39,13 +43,43 @@ namespace SchoolProject.Controllers
             ContentService contentService,
             EmailService emailService,
             ReCaptchaService recaptchaService,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            IListingService listingService,
+            ICityResolver cityResolver)
         {
             _context = context;
             _contentService = contentService;
             _emailService = emailService;
             _recaptchaService = recaptchaService;
             _cache = cache;
+            _listingService = listingService;
+            _cityResolver = cityResolver;
+        }
+
+        // ===== SEO URL: /{course}-coaching-in-{city} =====
+        [HttpGet]
+        [Route("{course}-in-{city}")]
+        public IActionResult CoachingList(
+            string course,
+            string city,
+            int page = 1,
+            string? locality = null,
+            string? nsewc = null,
+            int? coedId = null,
+            int? ownershipId = null,
+            string? feesRange = null)
+        {
+            ViewBag.IsCoaching = true;
+
+            return List(
+                course,
+                city,
+                page,
+                locality,
+                nsewc,
+                coedId,
+                ownershipId,
+                feesRange);
         }
 
         // ===== SEO URL: /{course}-colleges-in-{city} =====
@@ -73,30 +107,68 @@ namespace SchoolProject.Controllers
             int pageSize = 10;
 
             // Find course by slug
-            var courseObj = _context.Courses
-                .Include(c => c.Level)
-                .Include(c => c.Category)
-                .FirstOrDefault(c => c.CourseSlug != null &&
-                                     c.CourseSlug.ToLower() == course.ToLower());
+            Course? courseObj = null;
+            bool isCoaching =
+                HttpContext.Request.Path.Value!
+                    .Contains("-coaching-in-",
+                        StringComparison.OrdinalIgnoreCase);
+            int? specializationId = null;
 
-            if (courseObj == null)
-            {
-                // Try finding by category slug
-                var category = _context.CourseCategories
-                    .FirstOrDefault(c => c.CategorySlug != null &&
-                                         c.CategorySlug.ToLower() == course.ToLower());
+// First try CoursePages
+var pageObj = _context.CoursePages
+    .FirstOrDefault(p =>
+        p.PageSlug != null &&
+        p.PageSlug.ToLower() == course.ToLower() &&
+        p.IsActive);
 
-                if (category == null)
-                    return Content($"No course or category found for: '{course}'");
+if (pageObj != null)
+{
+    specializationId = pageObj.SpecializationId;
 
-                return ListByCategory(category.CategoryId, city, page, locality, nsewc, coedId, ownershipId, feesRange);
-            }
+    courseObj = _context.Courses
+        .Include(c => c.Level)
+        .Include(c => c.Category)
+        .FirstOrDefault(c => c.CourseId == pageObj.CourseId);
+}
+else
+{
+    // Fallback to course slug
+    courseObj = _context.Courses
+        .Include(c => c.Level)
+        .Include(c => c.Category)
+        .FirstOrDefault(c =>
+            c.CourseSlug != null &&
+            c.CourseSlug.ToLower() == course.ToLower());
 
-            city = city.Trim('/');
+    if (courseObj == null)
+    {
+        var category = _context.CourseCategories
+            .FirstOrDefault(c =>
+                c.CategorySlug != null &&
+                c.CategorySlug.ToLower() == course.ToLower());
 
-            var cityObj = _context.Cities
-                .FirstOrDefault(c => c.CitySlug != null &&
-                                     c.CitySlug.ToLower() == city.ToLower());
+        if (category == null)
+            return Content($"No course or category found for: '{course}'");
+
+        return ListByCategory(
+            category.CategoryId,
+            city,
+            page,
+            locality,
+            nsewc,
+            coedId,
+            ownershipId,
+            feesRange);
+    }
+    if (isCoaching && !courseObj.IsCoaching)
+    {
+        return NotFound();
+    }
+}
+
+            var cityObj = _cityResolver
+                .ResolveAsync(city)
+                .Result;
 
             if (cityObj == null)
                 return Content($"No city found for: '{city}'");
@@ -112,40 +184,67 @@ namespace SchoolProject.Controllers
                 .Include(c => c.CollegeCourses!)
                 .ThenInclude(cc => cc.SpecializationNav)
                 .Where(c =>
-                    c.CityId == cityObj.CityId &&
-                    c.IsActive &&
-                    c.CollegeCourses!.Any(cc => cc.CourseId == courseObj.CourseId && cc.IsActive));
-
+					c.CityId == cityObj.CityId &&
+					c.IsActive &&
+					c.CollegeCourses!.Any(cc =>
+						cc.CourseId == courseObj.CourseId &&
+						cc.IsActive &&
+						(
+							!specializationId.HasValue ||
+							cc.SpecializationId == specializationId.Value
+						)));
+            
             // Filter dropdowns
-            ViewBag.Localities = _context.Localities
-                .Where(l => l.CityId == cityObj.CityId &&
-                            l.Colleges!.Any(c => c.CollegeCourses!.Any(cc => cc.CourseId == courseObj.CourseId)))
-                .OrderBy(l => l.LocalityName)
-                .Select(l => new { l.LocalityId, l.LocalityName })
-                .ToList();
+				var selectedSpecializationId = specializationId;
 
-            ViewBag.NsewcOptions = _context.Localities
-                .Where(l => l.CityId == cityObj.CityId &&
-                            l.Nsewc != null && l.Nsewc != "" &&
-                            l.Colleges!.Any(c => c.CollegeCourses!.Any(cc => cc.CourseId == courseObj.CourseId)))
-                .Select(l => l.Nsewc!.ToLower())
-                .Distinct()
-                .ToList();
+				ViewBag.Localities = _context.Localities
+					.Where(l =>
+						l.CityId == cityObj.CityId &&
+						l.Colleges!.Any(c =>
+							c.CollegeCourses!.Any(cc =>
+								cc.CourseId == courseObj.CourseId &&
+								(
+									!selectedSpecializationId.HasValue ||
+									cc.SpecializationId == selectedSpecializationId.Value
+								))))
+					.OrderBy(l => l.LocalityName)
+					.Select(l => new { l.LocalityId, l.LocalityName })
+					.ToList();
 
-            ViewBag.CoedOptions = _context.Coeds
-                .Where(co => baseQuery.Any(c => c.CoedId == co.CoedId))
-                .OrderBy(co => co.CoedId)
-                .Select(co => new { co.CoedId, co.CoedName })
-                .ToList();
+				ViewBag.NsewcOptions = _context.Localities
+					.Where(l =>
+						l.CityId == cityObj.CityId &&
+						l.Nsewc != null &&
+						l.Nsewc != "" &&
+						l.Colleges!.Any(c =>
+							c.CollegeCourses!.Any(cc =>
+								cc.CourseId == courseObj.CourseId &&
+								(
+									!selectedSpecializationId.HasValue ||
+									cc.SpecializationId == selectedSpecializationId.Value
+								))))
+					.Select(l => l.Nsewc!.ToLower())
+					.Distinct()
+					.ToList();
 
-            ViewBag.OwnerOptions = baseQuery
-                .Include(c => c.Ownership)
-                .Where(c => c.Ownership != null && c.Ownership.InstOwnershipType != null)
-                .Select(c => new { c.InstOwnershipId, Type = c.Ownership!.InstOwnershipType })
-                .Distinct()
-                .OrderBy(o => o.Type)
-                .ToList();
+				ViewBag.CoedOptions = _context.Coeds
+					.Where(co => baseQuery.Any(c => c.CoedId == co.CoedId))
+					.OrderBy(co => co.CoedId)
+					.Select(co => new { co.CoedId, co.CoedName })
+					.ToList();
 
+				ViewBag.OwnerOptions = baseQuery
+					.Include(c => c.Ownership)
+					.Where(c => c.Ownership != null &&
+								c.Ownership.InstOwnershipType != null)
+					.Select(c => new
+					{
+						c.InstOwnershipId,
+						Type = c.Ownership!.InstOwnershipType
+					})
+					.Distinct()
+					.OrderBy(o => o.Type)
+					.ToList();
             // Apply filters
             var query = baseQuery;
 
@@ -175,29 +274,71 @@ namespace SchoolProject.Controllers
             int totalRecords = query.Count();
             var collegeList = ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
-            // ViewBag
-            ViewBag.TotalRecords = totalRecords;
-            ViewBag.TotalPages = (int)Math.Ceiling((double)totalRecords / pageSize);
-            ViewBag.CurrentPage = page;
-            ViewBag.Course = course;
-            ViewBag.City = city;
-            ViewBag.CourseName = courseObj.CourseName;
-            ViewBag.CityName = cityObj.CityName;
+            // Build display name (supports specialization pages)
+				string courseDisplayName = courseObj.CourseName;
 
-            ViewBag.SelLocality = (!string.IsNullOrWhiteSpace(locality) && int.TryParse(locality, out int selLid)) ? selLid : (int?)null;
-            ViewBag.SelNsewc = nsewc;
-            ViewBag.SelCoed = coedId;
-            ViewBag.SelOwnership = ownershipId;
-            ViewBag.SelFees = feesRange;
-            ViewBag.FiltersActive = locality != null || nsewc != null || coedId != null ||
-                                    ownershipId != null || feesRange != null;
+				if (specializationId.HasValue)
+				{
+					var specialization = _context.Specializations
+						.FirstOrDefault(s =>
+							s.SpecializationId == specializationId.Value);
 
-            ViewBag.ShowFilterPanel = true;
+					if (specialization != null)
+					{
+						courseDisplayName =
+							$"{courseObj.CourseName} {specialization.SpecializationName}";
+					}
+				}
 
-            ViewBag.Title = $"{courseObj.CourseName} Colleges in {cityObj.CityName} ({totalRecords} Colleges)";
-            if (page > 1) ViewBag.Title += $" - Page {page}";
+				// ViewBag
+				ViewBag.TotalRecords = totalRecords;
+				ViewBag.TotalPages = (int)Math.Ceiling((double)totalRecords / pageSize);
+				ViewBag.CurrentPage = page;
+				ViewBag.Course = course;
+				ViewBag.City = city;
+				ViewBag.CourseId = courseObj.CourseId;
+				ViewBag.SpecializationId = specializationId;
+				ViewBag.CourseId = courseObj.CourseId;
+				
+				ViewBag.CourseName = courseDisplayName;
+				ViewBag.CityName = cityObj.CityName;
 
-            ViewBag.Description = $"Explore {totalRecords} {courseObj.CourseName} colleges in {cityObj.CityName}. Compare fees, admission details, placements and more.";
+				ViewBag.SelLocality =
+					(!string.IsNullOrWhiteSpace(locality) &&
+					 int.TryParse(locality, out int selLid))
+						? selLid
+						: (int?)null;
+
+				ViewBag.SelNsewc = nsewc;
+				ViewBag.SelCoed = coedId;
+				ViewBag.SelOwnership = ownershipId;
+				ViewBag.SelFees = feesRange;
+
+				ViewBag.FiltersActive =
+					locality != null ||
+					nsewc != null ||
+					coedId != null ||
+					ownershipId != null ||
+					feesRange != null;
+
+				ViewBag.ShowFilterPanel = true;
+                ViewBag.IsCoaching = isCoaching;
+				
+				ViewBag.Specializations = _context.Specializations
+				.Where(s => s.CourseId == courseObj.CourseId && s.IsActive)
+				.OrderBy(s => s.SpecializationName)
+				.ToList();
+
+				ViewBag.Title = isCoaching
+                    ? $"{courseDisplayName} Coaching in {cityObj.CityName}"
+                    : $"{courseDisplayName} Colleges in {cityObj.CityName} ({totalRecords} Colleges)";
+
+				if (page > 1)
+					ViewBag.Title += $" - Page {page}";
+
+				ViewBag.Description = isCoaching
+                    ? $"Find the best {courseDisplayName} coaching institutes in {cityObj.CityName}. Compare fees, reviews, admission details and more."
+                    : $"Explore {totalRecords} {courseDisplayName} colleges in {cityObj.CityName}. Compare fees, admission details, placements and more.";
 
             var seoContent = _context.SeoContentColleges.FirstOrDefault(x =>
                 x.CityId == cityObj.CityId &&

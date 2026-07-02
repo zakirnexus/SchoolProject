@@ -152,13 +152,23 @@ $(document).ready(function () {
 $("#searchBox").autocomplete({
     source: function (request, response) {
         $.ajax({
-            url: "/Search/AutoComplete",
-            data: { term: request.term },
-            success: function (data) { response(data); }
+            url: "/api/SchoolSearch/suggest",
+            data: { q: request.term },
+            success: function (data) {
+                response($.map(data, function (item) {
+                    return {
+                        label: item.title,
+                        value: item.title,
+                        url: item.url
+                    };
+                }));
+            }
         });
     },
     minLength: 2,
     select: function (event, ui) {
-        window.location.href = ui.item.url;
+        if (ui.item.url) {
+            window.location.href = ui.item.url;
+        }
     }
 });

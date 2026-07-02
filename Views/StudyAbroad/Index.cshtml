@@ -1,0 +1,19 @@
+@model IEnumerable<SchoolProject.Models.StudyAbroad.Country>
+@{
+    ViewData["Title"] = "Study Abroad Countries";
+}
+
+<h1>Study Abroad – Countries</h1>
+
+<ul class="list-unstyled">
+@foreach (var country in Model)
+{
+    <li>
+        <a asp-controller="StudyAbroad"
+           asp-action="Country"
+           asp-route-countrySlug="@country.Slug">
+            @country.CountryName
+        </a>
+    </li>
+}
+</ul>

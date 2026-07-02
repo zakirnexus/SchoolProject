@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -54,14 +55,16 @@ namespace SchoolProject.Controllers
         private static int? ParseFeeMin(string? feesStructure)
         {
             if (string.IsNullOrWhiteSpace(feesStructure)) return null;
+
             var digits = new string(feesStructure.Where(char.IsDigit).ToArray());
             return digits.Length > 0 && int.TryParse(digits.Substring(0, Math.Min(digits.Length, 9)), out var val)
-                ? val : (int?)null;
+                ? val
+                : (int?)null;
         }
 
         [HttpGet]
         [Route("{board}-schools-in-{city}")]
-        [Route("{board}-schools-in-{nsewcSlug}-{city}")]
+        [Route("{board}-schools-in-area/{nsewcSlug}-{city}")]
         public IActionResult List(
             string board,
             string city,
@@ -81,27 +84,28 @@ namespace SchoolProject.Controllers
                 return RedirectPermanent(canonical);
             }
 
-            // SEO: redirect /cbse-schools-in-bangalore?nsewc=3 → /cbse-schools-in-south-bangalore
             if (!string.IsNullOrWhiteSpace(nsewc) && int.TryParse(nsewc, out int nsewcRedirectId))
             {
                 var nsewcRedirectSlug = _context.Nsewcs
                     .Where(n => n.NsewcId == nsewcRedirectId)
                     .Select(n => n.NsewcName)
-                    .FirstOrDefault()?.ToLower().Replace(" ", "-");
+                    .FirstOrDefault()?
+                    .ToLower()
+                    .Replace(" ", "-");
 
-                if (nsewcRedirectSlug != null)
+                if (!string.IsNullOrWhiteSpace(nsewcRedirectSlug))
                 {
-                    // Build clean URL: /cbse-schools-in-south-bangalore
-                    var cleanUrl = $"/{board}-schools-in-{nsewcRedirectSlug}-{city}";
+                    var cleanUrl = $"/{board}-schools-in-area/{nsewcRedirectSlug}-{city}";
 
-                    // Preserve other query params (locality, coedId, ownershipId, feesRange, page)
-                    var otherParams = new System.Collections.Generic.List<string>();
+                    var otherParams = new List<string>();
                     if (!string.IsNullOrWhiteSpace(locality)) otherParams.Add($"locality={locality}");
                     if (coedId.HasValue) otherParams.Add($"coedId={coedId}");
                     if (ownershipId.HasValue) otherParams.Add($"ownershipId={ownershipId}");
                     if (!string.IsNullOrWhiteSpace(feesRange)) otherParams.Add($"feesRange={Uri.EscapeDataString(feesRange)}");
                     if (page > 1) otherParams.Add($"page={page}");
-                    if (otherParams.Any()) cleanUrl += "?" + string.Join("&", otherParams);
+
+                    if (otherParams.Any())
+                        cleanUrl += "?" + string.Join("&", otherParams);
 
                     return RedirectPermanent(cleanUrl);
                 }
@@ -113,7 +117,8 @@ namespace SchoolProject.Controllers
                 .FirstOrDefault(s => s.SyllabusSlug != null &&
                                      s.SyllabusSlug.ToLower() == board.ToLower());
 
-            if (syllabus == null) return Content("No syllabus found");
+            if (syllabus == null)
+                return Content("No syllabus found");
 
             city = city.Trim('/');
 
@@ -128,16 +133,17 @@ namespace SchoolProject.Controllers
                     .Select(c => new { c.CityId, c.CityName, c.CitySlug })
                     .Take(30)
                     .ToList();
+
                 return Content("No city found for: '" + city + "'\n\nAvailable slugs:\n" +
                     string.Join("\n", allSlugs.Select(x => $"id={x.CityId} | {x.CityName} | CitySlug={x.CitySlug}")));
             }
 
-            // Resolve nsewcSlug from URL path (e.g. "south" from /cbse-schools-in-south-bangalore)
             if (!string.IsNullOrWhiteSpace(nsewcSlug) && string.IsNullOrWhiteSpace(nsewc))
             {
                 var nsewcFromSlug = _context.Nsewcs
                     .FirstOrDefault(n => n.NsewcName != null &&
-                        n.NsewcName.ToLower().Replace(" ", "-") == nsewcSlug.ToLower());
+                                         n.NsewcName.ToLower().Replace(" ", "-") == nsewcSlug.ToLower());
+
                 if (nsewcFromSlug != null)
                     nsewc = nsewcFromSlug.NsewcId.ToString();
             }
@@ -172,7 +178,6 @@ namespace SchoolProject.Controllers
                 .Select(c => new { c.CoedId, c.CoedName })
                 .ToList();
 
-            // STANDARDIZED: Use InstOwnershipId to match School model
             ViewBag.OwnerOptions = baseQuery
                 .Include(s => s.Ownership)
                 .Where(s => s.Ownership != null && s.Ownership.InstOwnershipType != null)
@@ -192,7 +197,6 @@ namespace SchoolProject.Controllers
             if (coedId.HasValue)
                 query = query.Where(s => s.CoedId == coedId.Value);
 
-            // STANDARDIZED: Use InstOwnershipId to match School model
             if (ownershipId.HasValue)
                 query = query.Where(s => s.InstOwnershipId == ownershipId.Value);
 
@@ -235,35 +239,45 @@ namespace SchoolProject.Controllers
             ViewBag.CurrentPage = page;
             ViewBag.Board = board;
             ViewBag.City = city;
+            ViewBag.CitySlug = cityObj.CitySlug ?? city;
+            ViewBag.CategorySlug = "schools";
 
-            int? selLidFinal = (!string.IsNullOrWhiteSpace(locality) && int.TryParse(locality, out int selLid)) ? selLid : (int?)null;
+            int? selLidFinal = (!string.IsNullOrWhiteSpace(locality) && int.TryParse(locality, out int selLid))
+                ? selLid
+                : (int?)null;
+
             ViewBag.SelLocality = selLidFinal;
             ViewBag.SelNsewc = nsewc;
             ViewBag.SelCoed = coedId;
             ViewBag.SelOwnership = ownershipId;
             ViewBag.SelFees = feesRange;
-            ViewBag.FiltersActive = locality != null || nsewc != null || coedId != null ||
-                                    ownershipId != null || feesRange != null;
+            ViewBag.FiltersActive = locality != null || nsewc != null || coedId != null || ownershipId != null || feesRange != null;
 
-            // Display name helpers for results label
             ViewBag.SelNsewcName = (!string.IsNullOrWhiteSpace(nsewc) && int.TryParse(nsewc, out int snid))
-                ? _context.Nsewcs.Where(n => n.NsewcId == snid).Select(n => n.NsewcName).FirstOrDefault() : null;
-            ViewBag.SelLocalityName = selLidFinal.HasValue
-                ? _context.Localities.Where(l => l.LocalityId == selLidFinal.Value).Select(l => l.LocalityName).FirstOrDefault() : null;
-            ViewBag.SelCoedName = coedId.HasValue
-                ? _context.Coeds.Where(c => c.CoedId == coedId.Value).Select(c => c.CoedName).FirstOrDefault() : null;
-            ViewBag.SelOwnershipName = ownershipId.HasValue
-                ? _context.InstOwnerships.Where(o => o.InstOwnershipId == ownershipId.Value).Select(o => o.InstOwnershipType).FirstOrDefault() : null;
-            ViewBag.NsewcSlug = nsewcSlug; // for pagination URL generation
+                ? _context.Nsewcs.Where(n => n.NsewcId == snid).Select(n => n.NsewcName).FirstOrDefault()
+                : null;
 
+            ViewBag.SelLocalityName = selLidFinal.HasValue
+                ? _context.Localities.Where(l => l.LocalityId == selLidFinal.Value).Select(l => l.LocalityName).FirstOrDefault()
+                : null;
+
+            ViewBag.SelCoedName = coedId.HasValue
+                ? _context.Coeds.Where(c => c.CoedId == coedId.Value).Select(c => c.CoedName).FirstOrDefault()
+                : null;
+
+            ViewBag.SelOwnershipName = ownershipId.HasValue
+                ? _context.InstOwnerships.Where(o => o.InstOwnershipId == ownershipId.Value).Select(o => o.InstOwnershipType).FirstOrDefault()
+                : null;
+
+            ViewBag.NsewcSlug = nsewcSlug;
             ViewBag.ShowFilterPanel = true;
 
-            // Build rich SEO title
-            var titleParts = new System.Collections.Generic.List<string>();
+            var titleParts = new List<string>();
             titleParts.Add(syllabus.SyllabusSlug!.ToUpper());
             if (ViewBag.SelNsewcName != null) titleParts.Add((string)ViewBag.SelNsewcName);
             titleParts.Add("Schools in");
             titleParts.Add(cityObj.CityName ?? city);
+
             ViewBag.Title = string.Join(" ", titleParts) + $" ({totalRecords} Schools)";
             if (page > 1) ViewBag.Title += $" - Page {page}";
 
@@ -276,6 +290,7 @@ namespace SchoolProject.Controllers
                 x.PageType == "List" &&
                 x.Section == "Top" &&
                 x.IsActive == true);
+
             ViewBag.TopContent = seoContent?.Content;
             ViewBag.BottomContent = _contentService.GetContent("List", cityObj.CityId, syllabus.SyllabusId, "Bottom");
             ViewBag.Sidebar = _sidebarService.GetSchoolListSidebar(
@@ -327,17 +342,17 @@ namespace SchoolProject.Controllers
                 })
                 .ToList();
 
-            var sidebar = new SchoolProject.Models.ViewModels.SidebarViewModel();
-            sidebar.Sections.Add(new SchoolProject.Models.ViewModels.SidebarSection
+            var sidebar = new SidebarViewModel();
+            sidebar.Sections.Add(new SidebarSection
             {
                 Heading = "Browse by Syllabus",
                 Items = syllabusLinks
             });
+
             ViewBag.Sidebar = sidebar;
 
             return View("Index", schools);
         }
-
 
         [HttpGet]
         [Route("schools-in-{city}")]
@@ -364,7 +379,8 @@ namespace SchoolProject.Controllers
             var cityObj = _context.Cities
                 .FirstOrDefault(c => c.CitySlug != null && c.CitySlug.ToLower() == city.ToLower());
 
-            if (cityObj == null) return Content("No city found for: '" + city + "'");
+            if (cityObj == null)
+                return Content("No city found for: '" + city + "'");
 
             var baseQuery = _context.Schools
                 .Include(s => s.City)
@@ -375,7 +391,6 @@ namespace SchoolProject.Controllers
                 .Include(s => s.SchoolSyllabuses!)
                 .Where(s => s.CityId == cityObj.CityId);
 
-            // Build a filtered base for cascading dropdowns (exclude locality itself from locality options)
             var optionQuery = baseQuery;
             if (!string.IsNullOrWhiteSpace(nsewc) && int.TryParse(nsewc, out int nsewcOptId))
                 optionQuery = optionQuery.Where(s => s.NsewcId == nsewcOptId);
@@ -386,7 +401,6 @@ namespace SchoolProject.Controllers
             if (syllabusId.HasValue)
                 optionQuery = optionQuery.Where(s => s.SchoolSyllabuses!.Any(ss => ss.SyllabusId == syllabusId.Value));
 
-            // Populate filter dropdowns (cascading)
             ViewBag.Localities = _context.Localities
                 .Where(l => l.CityId == cityObj.CityId && optionQuery.Any(s => s.LocalityId == l.LocalityId))
                 .OrderBy(l => l.LocalityName)
@@ -429,7 +443,6 @@ namespace SchoolProject.Controllers
                 .Select(sy => new { sy.SyllabusId, sy.SyllabusName })
                 .ToList();
 
-            // Apply filters
             var query = baseQuery;
             if (!string.IsNullOrWhiteSpace(locality) && int.TryParse(locality, out int localityId))
                 query = query.Where(s => s.LocalityId == localityId);
@@ -455,9 +468,15 @@ namespace SchoolProject.Controllers
                 var parts = feesRange.Split('-');
                 int feeMin = parts.Length >= 1 && int.TryParse(parts[0], out var lo) ? lo : 0;
                 int feeMax = parts.Length >= 2 && int.TryParse(parts[1], out var hi) ? hi : int.MaxValue;
+
                 var allMatched = ordered.ToList()
-                    .Where(s => { var fee = ParseFeeMin(s.FeesStructure); return fee.HasValue && fee.Value >= feeMin && fee.Value <= feeMax; })
+                    .Where(s =>
+                    {
+                        var fee = ParseFeeMin(s.FeesStructure);
+                        return fee.HasValue && fee.Value >= feeMin && fee.Value <= feeMax;
+                    })
                     .ToList();
+
                 totalRecords = allMatched.Count;
                 schoolList = allMatched.Skip((page - 1) * pageSize).Take(pageSize).ToList();
             }
@@ -467,47 +486,54 @@ namespace SchoolProject.Controllers
                 schoolList = ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
             }
 
-            ViewBag.TotalRecords   = totalRecords;
-            ViewBag.TotalPages     = (int)Math.Ceiling((double)totalRecords / pageSize);
-            ViewBag.CurrentPage    = page;
-            ViewBag.City           = city;
-            ViewBag.Board          = null; // no board filter — all syllabuses
-            ViewBag.CitySlug       = cityObj.CitySlug ?? city;
-            ViewBag.CategorySlug   = "schools";
+            ViewBag.TotalRecords = totalRecords;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)totalRecords / pageSize);
+            ViewBag.CurrentPage = page;
+            ViewBag.City = city;
+            ViewBag.Board = null;
+            ViewBag.CitySlug = cityObj.CitySlug ?? city;
+            ViewBag.CategorySlug = "schools";
 
             int? selLidCity = (!string.IsNullOrWhiteSpace(locality) && int.TryParse(locality, out int sl)) ? sl : (int?)null;
-            ViewBag.SelLocality  = selLidCity;
-            ViewBag.SelNsewc     = nsewc;
-            ViewBag.SelCoed      = coedId;
+            ViewBag.SelLocality = selLidCity;
+            ViewBag.SelNsewc = nsewc;
+            ViewBag.SelCoed = coedId;
             ViewBag.SelOwnership = ownershipId;
-            ViewBag.SelFees      = feesRange;
-            ViewBag.SelSyllabus  = syllabusId;
-            ViewBag.FiltersActive = locality != null || nsewc != null || coedId != null ||
-                                    ownershipId != null || feesRange != null || syllabusId != null;
+            ViewBag.SelFees = feesRange;
+            ViewBag.SelSyllabus = syllabusId;
+            ViewBag.FiltersActive = locality != null || nsewc != null || coedId != null || ownershipId != null || feesRange != null || syllabusId != null;
 
-            // Display name helpers for results label
-            ViewBag.SelNsewcName     = (!string.IsNullOrWhiteSpace(nsewc) && int.TryParse(nsewc, out int snid))
-                ? _context.Nsewcs.Where(n => n.NsewcId == snid).Select(n => n.NsewcName).FirstOrDefault() : null;
-            ViewBag.SelLocalityName  = selLidCity.HasValue
-                ? _context.Localities.Where(l => l.LocalityId == selLidCity.Value).Select(l => l.LocalityName).FirstOrDefault() : null;
-            ViewBag.SelCoedName      = coedId.HasValue
-                ? _context.Coeds.Where(c => c.CoedId == coedId.Value).Select(c => c.CoedName).FirstOrDefault() : null;
+            ViewBag.SelNsewcName = (!string.IsNullOrWhiteSpace(nsewc) && int.TryParse(nsewc, out int snid))
+                ? _context.Nsewcs.Where(n => n.NsewcId == snid).Select(n => n.NsewcName).FirstOrDefault()
+                : null;
+
+            ViewBag.SelLocalityName = selLidCity.HasValue
+                ? _context.Localities.Where(l => l.LocalityId == selLidCity.Value).Select(l => l.LocalityName).FirstOrDefault()
+                : null;
+
+            ViewBag.SelCoedName = coedId.HasValue
+                ? _context.Coeds.Where(c => c.CoedId == coedId.Value).Select(c => c.CoedName).FirstOrDefault()
+                : null;
+
             ViewBag.SelOwnershipName = ownershipId.HasValue
-                ? _context.InstOwnerships.Where(o => o.InstOwnershipId == ownershipId.Value).Select(o => o.InstOwnershipType).FirstOrDefault() : null;
-            ViewBag.SelSyllabusName  = syllabusId.HasValue
-                ? _context.Syllabuses.Where(s => s.SyllabusId == syllabusId.Value).Select(s => s.SyllabusName).FirstOrDefault() : null;
-            ViewBag.NsewcSlug        = null; // no path-based nsewc for /schools-in-city
+                ? _context.InstOwnerships.Where(o => o.InstOwnershipId == ownershipId.Value).Select(o => o.InstOwnershipType).FirstOrDefault()
+                : null;
 
+            ViewBag.SelSyllabusName = syllabusId.HasValue
+                ? _context.Syllabuses.Where(s => s.SyllabusId == syllabusId.Value).Select(s => s.SyllabusName).FirstOrDefault()
+                : null;
+
+            ViewBag.NsewcSlug = null;
             ViewBag.ShowFilterPanel = true;
 
-            // Build rich title: "CBSE Central Co-ed Private Schools in Bangalore"
-            var cityTitleParts = new System.Collections.Generic.List<string>();
+            var cityTitleParts = new List<string>();
             if (ViewBag.SelSyllabusName != null) cityTitleParts.Add(((string)ViewBag.SelSyllabusName).ToUpper());
-            if (ViewBag.SelNsewcName    != null) cityTitleParts.Add((string)ViewBag.SelNsewcName);
-            if (ViewBag.SelCoedName     != null) cityTitleParts.Add((string)ViewBag.SelCoedName);
+            if (ViewBag.SelNsewcName != null) cityTitleParts.Add((string)ViewBag.SelNsewcName);
+            if (ViewBag.SelCoedName != null) cityTitleParts.Add((string)ViewBag.SelCoedName);
             if (ViewBag.SelOwnershipName != null) cityTitleParts.Add((string)ViewBag.SelOwnershipName);
             cityTitleParts.Add("Schools in");
             cityTitleParts.Add(cityObj.CityName ?? city);
+
             ViewBag.Title = string.Join(" ", cityTitleParts) + $" ({totalRecords} Schools)";
             if (page > 1) ViewBag.Title += $" - Page {page}";
 
@@ -520,16 +546,17 @@ namespace SchoolProject.Controllers
                 .Select(s => new SidebarItem
                 {
                     Title = $"{s.SyllabusName} Schools in {cityObj.CityName}",
-                    Url   = $"/{s.SyllabusSlug}-schools-in-{cityObj.CitySlug}"
+                    Url = $"/{s.SyllabusSlug}-schools-in-{cityObj.CitySlug}"
                 })
                 .ToList();
 
-            var sidebar = new SchoolProject.Models.ViewModels.SidebarViewModel();
-            sidebar.Sections.Add(new SchoolProject.Models.ViewModels.SidebarSection
+            var sidebar = new SidebarViewModel();
+            sidebar.Sections.Add(new SidebarSection
             {
                 Heading = "Browse by Syllabus",
-                Items   = syllabusLinks
+                Items = syllabusLinks
             });
+
             ViewBag.Sidebar = sidebar;
 
             return View("Index", schoolList);
@@ -542,24 +569,24 @@ namespace SchoolProject.Controllers
                 .Include(s => s.City)
                 .Include(s => s.Syllabus)
                 .Include(s => s.SchoolSyllabuses!)
-                .ThenInclude(ss => ss.Syllabus)
+                    .ThenInclude(ss => ss.Syllabus)
                 .FirstOrDefault(s => s.InstituteSlug == slug);
 
-            if (school == null) return Content("Slug not found: " + slug);
+            if (school == null)
+                return Content("Slug not found: " + slug);
 
             ViewBag.Sidebar = _sidebarService.GetSchoolSidebar(school);
             ViewBag.DetailContent = _contentService.GetContent("Details", school.CityId, school.SyllabusId, "Bottom");
             ViewBag.Title = $"{school.InstituteName} in {school.City?.CityName}";
             ViewBag.Description = $"{school.InstituteName} is a {school.Syllabus?.SyllabusName} school located in {school.City?.CityName}.";
             ViewBag.Canonical = $"/school/{school.InstituteSlug}";
-            ViewBag.InstituteId   = school.InstituteId;
+            ViewBag.InstituteId = school.InstituteId;
             ViewBag.InstituteName = school.InstituteName;
-            ViewBag.Photos        = school.Photos;
+            ViewBag.Photos = school.Photos;
 
             return View("Details", school);
         }
 
-        // STANDARDIZED: Fixed async Task -> async Task<IActionResult>
         [HttpPost]
         [Route("Enquiry/Submit")]
         public async Task<IActionResult> Submit([FromBody] EnquiryDto dto)
@@ -575,14 +602,16 @@ namespace SchoolProject.Controllers
 
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             var rateLimitKey = $"enquiry_rate_{ip}";
-            var minuteKey = $"enquiry_hour_{ip}";
+            var hourKey = $"enquiry_hour_{ip}";
 
-            int minuteCount = _cache.GetOrCreate(rateLimitKey, e => {
+            int minuteCount = _cache.GetOrCreate(rateLimitKey, e =>
+            {
                 e.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
                 return 0;
             });
 
-            int hourCount = _cache.GetOrCreate(minuteKey, e => {
+            int hourCount = _cache.GetOrCreate(hourKey, e =>
+            {
                 e.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
                 return 0;
             });
@@ -591,7 +620,7 @@ namespace SchoolProject.Controllers
                 return StatusCode(429, new { success = false, message = "Too many submissions. Please try again later." });
 
             _cache.Set(rateLimitKey, minuteCount + 1, TimeSpan.FromMinutes(1));
-            _cache.Set(minuteKey, hourCount + 1, TimeSpan.FromHours(1));
+            _cache.Set(hourKey, hourCount + 1, TimeSpan.FromHours(1));
 
             if (!string.IsNullOrWhiteSpace(dto.RecaptchaToken))
             {
@@ -639,15 +668,9 @@ namespace SchoolProject.Controllers
 
             if (dto.InstituteId > 0)
             {
-                var school = _context.Schools
-                    .FirstOrDefault(s => s.InstituteId == dto.InstituteId);
-
+                var school = _context.Schools.FirstOrDefault(s => s.InstituteId == dto.InstituteId);
                 phone = school?.Telephone;
                 schoolEmail = school?.Email;
-
-                Console.WriteLine($"InstituteId: {dto.InstituteId}");
-                Console.WriteLine($"School found: {school != null}");
-                Console.WriteLine($"School email: '{schoolEmail}'");
             }
 
             try

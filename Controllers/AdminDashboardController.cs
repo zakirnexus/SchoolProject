@@ -15,35 +15,52 @@ namespace SchoolProject.Controllers
             _context = context;
         }
 
-        // GET: /AdminDashboard
-        [HttpGet]
+       [HttpGet]
         [Route("AdminDashboard")]
         [Route("Admin")]
         public IActionResult Index()
         {
-            // Stats
-            ViewBag.TotalSchools = _context.Schools.Count(s => s.IsActive);
-            ViewBag.TotalColleges = _context.Colleges.Count(c => c.IsActive);
+            // Stats (simple counts, read‑only)
+            ViewBag.TotalSchools = _context.Schools
+                .Where(s => s.IsActive)
+                .AsNoTracking()
+                .Count();
 
-            // Count enquiries from BOTH tables
-            var schoolEnquiryCount = _context.Enquiries.Count();      // response table
-            var collegeEnquiryCount = _context.CollegeEnquiries.Count(); // tb_college_enquiries
+            ViewBag.TotalColleges = _context.Colleges
+                .Where(c => c.IsActive)
+                .AsNoTracking()
+                .Count();
+
+            var schoolEnquiryCount = _context.Enquiries
+                .AsNoTracking()
+                .Count();
+
+            var collegeEnquiryCount = _context.CollegeEnquiries
+                .AsNoTracking()
+                .Count();
+
             ViewBag.TotalEnquiries = schoolEnquiryCount + collegeEnquiryCount;
             ViewBag.SchoolEnquiryCount = schoolEnquiryCount;
             ViewBag.CollegeEnquiryCount = collegeEnquiryCount;
 
-            ViewBag.TotalBlogPosts = _context.BlogPosts.Count();
+            ViewBag.TotalBlogPosts = _context.BlogPosts
+                .AsNoTracking()
+                .Count();
 
-            // Recent enquiries (limited to 5 each to avoid timeout)
+            // Recent enquiries – small, read‑only lists
             ViewBag.RecentSchoolEnquiries = _context.Enquiries
+                .Where(e => e.EntryDate != null)
                 .OrderByDescending(e => e.EntryDate)
                 .Take(5)
+                .AsNoTracking()
                 .ToList();
 
             ViewBag.RecentCollegeEnquiries = _context.CollegeEnquiries
+                .Where(e => e.EntryDate != null)
                 .Include(e => e.College)
                 .OrderByDescending(e => e.EntryDate)
                 .Take(5)
+                .AsNoTracking()
                 .ToList();
 
             return View();

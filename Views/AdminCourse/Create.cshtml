@@ -1,0 +1,127 @@
+@model SchoolProject.Models.Courses.Course
+
+@{
+ViewData["Title"] = "Create Course";
+Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container-fluid">
+    <h2>Create Course</h2>
+
+
+<form asp-action="Create" method="post">
+
+    <div class="mb-3">
+        <label class="form-label">Course Name</label>
+        <input asp-for="CourseName" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Short Name</label>
+        <input asp-for="ShortName" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Course Full Name</label>
+        <input asp-for="CourseFullName" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Course Slug</label>
+        <input asp-for="CourseSlug" class="form-control" />
+        <small class="text-muted">
+            Leave blank to auto-generate.
+        </small>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Course Level</label>
+        <select asp-for="LevelId" class="form-select">
+            @foreach (var level in ViewBag.Levels)
+            {
+                <option value="@level.LevelId">
+                    @level.LevelName
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Course Category</label>
+        <select asp-for="CategoryId" class="form-select">
+            @foreach (var category in ViewBag.Categories)
+            {
+                <option value="@category.CategoryId">
+                    @category.CategoryName
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Degree Type</label>
+        <select asp-for="DegreeTypeId" class="form-select">
+            <option value="">-- Select Degree Type --</option>
+
+            @foreach (var item in ViewBag.DegreeTypes)
+            {
+                <option value="@item.DegreeTypeId">
+                    @item.DegreeName
+                </option>
+            }
+        </select>
+    </div>
+
+    
+
+    <div class="mb-3">
+        <label class="form-label">Core Specialization</label>
+        <select asp-for="CoreSpecializationId" class="form-select">
+            <option value="">-- Select Specialization --</option>
+
+            @foreach (var item in ViewBag.Specializations)
+            {
+                <option value="@item.SpecializationId">
+                    @item.SpecializationName
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Duration (Years)</label>
+        <input asp-for="DurationYears"
+               class="form-control"
+               type="number" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <textarea asp-for="Description"
+                  rows="5"
+                  class="form-control"></textarea>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="IsActive"
+               class="form-check-input" />
+        <label asp-for="IsActive"
+               class="form-check-label">
+            Active
+        </label>
+    </div>
+
+    <button type="submit"
+            class="btn btn-success">
+        Save Course
+    </button>
+
+    <a href="/AdminCourse"
+       class="btn btn-secondary">
+        Cancel
+    </a>
+
+</form>
+
+
+</div>

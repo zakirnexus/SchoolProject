@@ -20,6 +20,9 @@ namespace SchoolProject.Models.Colleges
 
         [Column("specialization_id")]
         public int? SpecializationId { get; set; }
+		
+		[Column("original_course_name")]
+		public string? OriginalCourseName { get; set; }
 
         [Column("fees_structure")]
         public string? FeesStructure { get; set; }
@@ -56,7 +59,7 @@ namespace SchoolProject.Models.Colleges
 
         [Column("created_date")]
         public DateTime CreatedDate { get; set; } = DateTime.Now;
-
+		
         [Column("modified_date")]
         public DateTime ModifiedDate { get; set; } = DateTime.Now;
 
@@ -64,5 +67,6 @@ namespace SchoolProject.Models.Colleges
         public College? College { get; set; }
         public Course? Course { get; set; }
         public Specialization? SpecializationNav { get; set; }
+
     }
 }

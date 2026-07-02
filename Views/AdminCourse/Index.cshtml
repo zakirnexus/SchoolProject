@@ -1,0 +1,64 @@
+@model List<SchoolProject.Models.Courses.Course>
+
+@{
+ViewData["Title"] = "Courses";
+Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<h2>Courses</h2>
+
+<p>
+    <a href="/AdminCourse/Create" class="btn btn-primary">
+        Add Course
+    </a>
+</p>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Course</th>
+            <th>Short Name</th>
+            <th>Level</th>
+            <th>Category</th>
+            <th>Active</th>
+            <th></th>
+        </tr>
+    </thead>
+
+
+<tbody>
+@foreach (var course in Model)
+{
+    <tr>
+        <td>@course.CourseId</td>
+        <td>@course.CourseName</td>
+        <td>@course.ShortName</td>
+        <td>@course.Level?.LevelName</td>
+        <td>@course.Category?.CategoryName</td>
+        <td>@course.IsActive</td>
+        <td>
+			<a class="btn btn-sm btn-warning"
+			   href="/AdminCourse/Edit/@course.CourseId">
+				Edit
+			</a>
+
+			@if (course.IsActive)
+			{
+				<a class="btn btn-sm btn-secondary"
+				   href="/AdminCourse/Delete/@course.CourseId"
+				   onclick="return confirm('Deactivate this course?');">
+					Deactivate
+				</a>
+			}
+			else
+			{
+				<span class="badge bg-danger">Inactive</span>
+			}
+		</td>
+    </tr>
+}
+</tbody>
+
+
+</table>

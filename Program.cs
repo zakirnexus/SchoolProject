@@ -1,7 +1,11 @@
+using Elastic.Clients.Elasticsearch;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using SchoolProject.Data;
 using SchoolProject.Services;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using SchoolProject.Controllers;
+using SchoolProject.Services.Education;
+using SchoolProject.Services.Education.Resolvers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,31 +13,29 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddUserSecrets<Program>()
+    .AddUserSecrets<Program>(optional: true)
     .AddEnvironmentVariables();
 
 // ===== SERVICES =====
 builder.Services.AddControllersWithViews();
-
-// Proper DI registration
-builder.Services.AddScoped<EmailService>();
-builder.Services.AddScoped<ReCaptchaService>();
-builder.Services.AddScoped<ContentService>();
-builder.Services.AddScoped<SidebarService>();
-builder.Services.AddScoped<NavService>();
-
-// Caching
+builder.Services.AddScoped<IListingService, ListingService>();
+builder.Services.AddScoped<ICourseResolver, CourseResolver>();
+builder.Services.AddScoped<ICityResolver, CityResolver>();
 builder.Services.AddMemoryCache();
-
-// HttpClient
 builder.Services.AddHttpClient();
-
-// HttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 
-// Database
+
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<NavService>();
+builder.Services.AddScoped<SidebarService>();
+builder.Services.AddScoped<ContentService>();
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<ReCaptchaService>();
+builder.Services.AddScoped<SchoolSearchController>();
 
 // Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -55,6 +57,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("EditorOrAdmin", policy => policy.RequireRole("Admin", "Editor"));
 });
 
+// Elasticsearch 9.x client
+var esSettings = new ElasticsearchClientSettings(new Uri("http://localhost:9200"))
+    .DefaultIndex("be_search_v1");
+
+builder.Services.AddSingleton(new ElasticsearchClient(esSettings));
+
 // ===== BUILD APP =====
 var app = builder.Build();
 
@@ -72,9 +80,16 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ===== SEO ROUTES (Order matters - specific first) =====
+// ===== SEO ROUTES =====
+app.MapControllerRoute(
+    name: "coaching-list",
+    pattern: "{course}-coaching-in-{city}",
+    defaults: new
+    {
+        controller = "College",
+        action = "CoachingList"
+    });
 
-// College routes
 app.MapControllerRoute(
     name: "college-list",
     pattern: "{course}-colleges-in-{city}",
@@ -85,7 +100,6 @@ app.MapControllerRoute(
     pattern: "college/{slug}",
     defaults: new { controller = "College", action = "Details" });
 
-// School routes
 app.MapControllerRoute(
     name: "school-list",
     pattern: "{board}-schools-in-{city}",
@@ -96,9 +110,20 @@ app.MapControllerRoute(
     pattern: "school/{slug}",
     defaults: new { controller = "School", action = "Details" });
 
-// Default route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapControllerRoute(
+    name: "study-abroad",
+    pattern: "study-abroad/{countrySlug?}/{instituteSlug?}",
+    defaults: new { controller = "StudyAbroad", action = "Index" });
+
+// ===== Reindex code for ElasticSearch =====
+using (var scope = app.Services.CreateScope())
+{
+    var searchController = scope.ServiceProvider.GetRequiredService<SchoolSearchController>();
+    await searchController.ReindexAll();
+}
 
 app.Run();

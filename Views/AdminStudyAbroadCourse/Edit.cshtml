@@ -1,0 +1,107 @@
+@model SchoolProject.Models.StudyAbroad.CourseIntl
+
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Edit Study Abroad Course";
+
+    var categories = ViewBag.CourseCategories as IEnumerable<SchoolProject.Models.StudyAbroad.CourseCategoryIntl>;
+    var levels = ViewBag.CourseLevels as IEnumerable<SchoolProject.Models.StudyAbroad.CourseLevelIntl>;
+    var courseNames = ViewBag.CourseNames as IEnumerable<SchoolProject.Models.StudyAbroad.CourseNameIntl>;
+}
+
+<h1 class="mb-3">Edit Study Abroad Course</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<form asp-action="Edit"
+      asp-controller="AdminStudyAbroadCourse"
+      asp-route-id="@Model.CourseId"
+      method="post">
+
+    <input type="hidden" asp-for="CourseId" />
+
+    <div class="mb-3">
+        <label asp-for="CourseName" class="form-label"></label>
+        <input asp-for="CourseName" class="form-control" />
+        <span asp-validation-for="CourseName" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Course name type</label>
+        <select asp-for="CourseNameId" class="form-select">
+            <option value="">-- Select type (e.g. BEng, BSc, MBA) --</option>
+            @if (courseNames != null)
+            {
+                foreach (var n in courseNames)
+                {
+                    <option value="@n.CourseNameId">
+                        @n.CourseName @if (!string.IsNullOrWhiteSpace(n.DisplayName)) { @($" - {n.DisplayName}") }
+                    </option>
+                }
+            }
+        </select>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Category</label>
+            <select asp-for="CourseCategoryId" class="form-select">
+                <option value="">-- Select Category --</option>
+                @if (categories != null)
+                {
+                    foreach (var cat in categories)
+                    {
+                        <option value="@cat.CourseCategoryId">@cat.Name</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Level</label>
+            <select asp-for="LevelId" class="form-select">
+                <option value="">-- Select Level --</option>
+                @if (levels != null)
+                {
+                    foreach (var lvl in levels)
+                    {
+                        <option value="@lvl.LevelId">@lvl.LevelName</option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="DegreeType" class="form-label"></label>
+        <input asp-for="DegreeType" class="form-control" />
+        <span class="text-muted">Example: Bachelors, Masters, Diploma, etc.</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Slug" class="form-label"></label>
+        <input asp-for="Slug" class="form-control" />
+        <small class="text-muted">
+            If blank, slug will be regenerated from the course name.
+        </small>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="IsActive" class="form-check-input" />
+        <label asp-for="IsActive" class="form-check-label"></label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save changes</button>
+    <a asp-action="Index"
+       asp-controller="AdminStudyAbroadCourse"
+       class="btn btn-secondary">
+        Cancel
+    </a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

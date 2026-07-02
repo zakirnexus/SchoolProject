@@ -1,3 +1,4 @@
+
 @model IEnumerable<SchoolProject.Models.Colleges.College>
 
 @{
@@ -8,6 +9,12 @@
     int currentPage = ViewBag.CurrentPage is int cp ? cp : 1;
     string courseSlug = ViewBag.Course as string ?? "colleges";
     string citySlug = ViewBag.City as string ?? "bengaluru";
+
+    bool isCoaching = ViewBag.IsCoaching == true;
+
+    string listingUrl = isCoaching
+        ? "/" + courseSlug + "-coaching-in-" + citySlug
+        : "/" + courseSlug + "-colleges-in-" + citySlug;
 
     bool filtersActive = ViewBag.FiltersActive is bool fa && fa;
 
@@ -21,8 +28,8 @@
 }
 
 @section MetaTags {
-    <title>@(ViewBag.Title as string ?? courseName + " Colleges in " + cityName)</title>
-    <meta name="description" content="@(ViewBag.Description as string ?? "Explore colleges in " + cityName)" />
+    <title> @(ViewBag.Title as string ?? (ViewBag.IsCoaching == true ? $"{courseName} Coaching Institutes in {cityName}" : $"{courseName} Colleges in {cityName}"))</title>
+    <meta name="description" content="@(ViewBag.Description as string ?? (ViewBag.IsCoaching == true ? $"Find the best {courseName} coaching institutes in {cityName}."  : $"Explore colleges in {cityName}."))" />
 }
 
 <!-- Results count -->
@@ -33,7 +40,9 @@
     <div class="results-count" style="margin:10px 0; font-size:14px;">
         Showing <strong>@start–@end</strong> of
         <strong>@totalRecords</strong>
-        @courseName Colleges in @cityName
+        @(ViewBag.IsCoaching == true
+            ? $"{courseName} Coaching Institutes in {cityName}"
+            : $"{courseName} Colleges in {cityName}")
 
         @if (filtersActive)
         {
@@ -47,7 +56,9 @@
 else
 {
     <div class="alert alert-info" style="margin-top:10px;">
-        No colleges found matching your filters.
+        @(ViewBag.IsCoaching == true
+            ? "No coaching institutes found."
+            : "No colleges found matching your filters.")
         @if (filtersActive)
         {
             <a href="/@(courseSlug)-colleges-in-@(citySlug)" style="margin-left:6px;">Clear all filters</a>
@@ -139,37 +150,64 @@ else
 
         <ul>
             @if (college.CollegeCourses != null)
-            {
-                var courseNames = new List<string>();
-                foreach (var cc in college.CollegeCourses)
-                {
-                    if (cc.IsActive && cc.Course != null && !string.IsNullOrEmpty(cc.Course.CourseName))
-                    {
-                        var label = cc.Course.CourseName;
-                        if (cc.SpecializationNav != null && !string.IsNullOrEmpty(cc.SpecializationNav.SpecializationName))
-                            label += " - " + cc.SpecializationNav.SpecializationName;
-                        courseNames.Add(label);
-                    }
-                }
-                if (courseNames.Any())
-                {
-                    <li class="list-group-item">
-                        <strong>Courses:</strong>&nbsp;
-                        @for (int i = 0; i < Math.Min(courseNames.Count, 5); i++)
-                        {
-                            <span class="label label-default" style="margin-right:3px; font-weight:normal;">@courseNames[i]</span>
-                        }
-                        @if (courseNames.Count > 5)
-                        {
-                            <span class="label label-default" style="font-weight:normal;">+@(courseNames.Count - 5) more</span>
-                        }
-                    </li>
-                }
-            }
-            @if (!string.IsNullOrEmpty(college.MetaDescription))
-            {
-                <li class="list-group-item"><strong>Institute Brief:</strong> @college.MetaDescription</li>
-            }
+			{
+				var currentCourseId = ViewBag.CourseId as int?;
+
+				var courseNames = college.CollegeCourses
+					.Where(cc =>
+						cc.IsActive &&
+						cc.Course != null &&
+						!string.IsNullOrEmpty(cc.Course.CourseName) &&
+						(
+							!currentCourseId.HasValue ||
+							cc.CourseId == currentCourseId.Value
+						))
+					.Select(cc =>
+					{
+						var label = cc.Course!.CourseName!;
+
+						if (!string.IsNullOrWhiteSpace(cc.OriginalCourseName))
+						{
+							label += " - " + cc.OriginalCourseName;
+						}
+						else if (cc.SpecializationNav != null &&
+								 !string.IsNullOrWhiteSpace(cc.SpecializationNav.SpecializationName))
+						{
+							label += " - " + cc.SpecializationNav.SpecializationName;
+						}
+
+						return label;
+					})
+					.Distinct()
+					.ToList();
+
+				if (courseNames.Any())
+				{
+					<li class="list-group-item">
+						<strong>Courses:</strong>&nbsp;
+
+						@for (int i = 0; i < Math.Min(courseNames.Count, 5); i++)
+						{
+							<span class="label label-default"
+								  style="margin-right:3px; font-weight:normal;">
+								@courseNames[i]
+							</span>
+						}
+
+						@if (courseNames.Count > 5)
+						{
+							<span class="label label-default"
+								  style="font-weight:normal;">
+								+@(courseNames.Count - 5) more
+							</span>
+						}
+					</li>
+				}
+			}
+						@if (!string.IsNullOrEmpty(college.MetaDescription))
+						{
+							<li class="list-group-item"><strong>Institute Brief:</strong> @college.MetaDescription</li>
+						}
         </ul>
 
         <div class="action-buttons">
@@ -192,7 +230,11 @@ else
             <ul class="pagination">
                 @if (currentPage > 1)
                 {
-                    string prevUrl = "/" + courseSlug + "-colleges-in-" + citySlug + "?page=" + (currentPage - 1)
+                    string prevUrl = (ViewBag.IsCoaching == true
+                        ? "/" + courseSlug + "-coaching-in-" + citySlug
+                        : (ViewBag.IsCoaching == true
+                            ? "/" + courseSlug + "-coaching-in-" + citySlug
+                            : "/" + courseSlug + "-colleges-in-" + citySlug)) + "?page=" + (currentPage - 1)
                         + (selLocality.HasValue ? "&locality=" + selLocality.Value : "")
                         + (!string.IsNullOrEmpty(selNsewc) ? "&nsewc=" + Uri.EscapeDataString(selNsewc) : "")
                         + (selCoed.HasValue ? "&coedId=" + selCoed.Value : "")
@@ -202,7 +244,9 @@ else
                 }
                 @for (int i = 1; i <= totalPages; i++)
                 {
-                    string pageUrl = "/" + courseSlug + "-colleges-in-" + citySlug + "?page=" + i
+                    string pageUrl = (ViewBag.IsCoaching == true
+                        ? "/" + courseSlug + "-coaching-in-" + citySlug
+                        : "/" + courseSlug + "-colleges-in-" + citySlug) + "?page=" + i
                         + (selLocality.HasValue ? "&locality=" + selLocality.Value : "")
                         + (!string.IsNullOrEmpty(selNsewc) ? "&nsewc=" + Uri.EscapeDataString(selNsewc) : "")
                         + (selCoed.HasValue ? "&coedId=" + selCoed.Value : "")
@@ -220,7 +264,9 @@ else
                 }
                 @if (currentPage < totalPages)
                 {
-                    string nextUrl = "/" + courseSlug + "-colleges-in-" + citySlug + "?page=" + (currentPage + 1)
+                    string nextUrl = (ViewBag.IsCoaching == true
+                        ? "/" + courseSlug + "-coaching-in-" + citySlug
+                        : "/" + courseSlug + "-colleges-in-" + citySlug) + "?page=" + (currentPage + 1)
                         + (selLocality.HasValue ? "&locality=" + selLocality.Value : "")
                         + (!string.IsNullOrEmpty(selNsewc) ? "&nsewc=" + Uri.EscapeDataString(selNsewc) : "")
                         + (selCoed.HasValue ? "&coedId=" + selCoed.Value : "")

@@ -1,0 +1,76 @@
+@model SchoolProject.Models.Courses.Specialization
+
+@{
+ViewData["Title"] = "Edit Specialization";
+Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container-fluid">
+
+<h2>Edit Specialization</h2>
+
+<form asp-action="Edit" method="post">
+
+    <input asp-for="SpecializationId" type="hidden" />
+
+    <div class="mb-3">
+        <label class="form-label">Course</label>
+
+        <select asp-for="CourseId" class="form-select" required>
+            @foreach (var course in ViewBag.Courses)
+            {
+                <option value="@course.CourseId">
+                    @course.CourseName
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Specialization Name</label>
+
+        <input asp-for="SpecializationName"
+               class="form-control"
+               required />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Slug</label>
+
+        <input asp-for="SpecializationSlug"
+               class="form-control" />
+    </div>
+
+    <div class="form-check mb-2">
+        <input asp-for="IsActive"
+               class="form-check-input" />
+
+        <label asp-for="IsActive"
+               class="form-check-label">
+            Active
+        </label>
+    </div>
+
+    <div class="form-check mb-4">
+        <input asp-for="IsDeprecated"
+               class="form-check-input" />
+
+        <label asp-for="IsDeprecated"
+               class="form-check-label">
+            Deprecated
+        </label>
+    </div>
+
+    <button type="submit"
+            class="btn btn-success">
+        Update Specialization
+    </button>
+
+    <a href="/AdminSpecialization"
+       class="btn btn-secondary">
+        Cancel
+    </a>
+
+</form>
+
+</div>

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using SchoolProject.Models.Colleges;
 
 namespace SchoolProject.Models.Courses
 {
@@ -39,5 +40,26 @@ namespace SchoolProject.Models.Courses
 
         [Column("short_name")]
         public string? ShortName { get; set; }
+		
+		[Column("degree_type_id")]
+		public int? DegreeTypeId { get; set; }
+
+		[Column("core_specialization_id")]
+		public int? CoreSpecializationId { get; set; }
+
+		[Column("core_subject_id")]
+		public int? CoreSubjectId { get; set; }
+		
+		public ICollection<Specialization>? Specializations { get; set; }
+
+        [Column("is_coaching")]
+        public bool IsCoaching { get; set; }
+
+        [Column("is_competitive_exam")]
+        public bool IsCompetitiveExam { get; set; }
+
+        [Column("is_certification")]
+        public bool IsCertification { get; set; }
+
     }
 }

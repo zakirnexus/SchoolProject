@@ -1,0 +1,171 @@
+@model SchoolProject.Models.StudyAbroad.IntlInstitute
+@{
+    ViewData["Title"] = Model.InstituteName;
+    var countrySlug = Model.Country?.Slug;
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a asp-controller="StudyAbroad" asp-action="Index">Study Abroad</a>
+        </li>
+        @if (!string.IsNullOrWhiteSpace(countrySlug))
+        {
+            <li class="breadcrumb-item">
+                <a asp-controller="StudyAbroad"
+                   asp-action="Country"
+                   asp-route-countrySlug="@countrySlug">
+                    @Model.Country.CountryName
+                </a>
+            </li>
+        }
+        <li class="breadcrumb-item active" aria-current="page">@Model.InstituteName</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <h1>@Model.InstituteName</h1>
+
+        @if (!string.IsNullOrWhiteSpace(Model.UniversityName))
+        {
+            <p class="text-muted">@Model.UniversityName</p>
+        }
+
+        <p class="text-muted">
+            @if (Model.City != null)
+            {
+                @Model.City.CityName<span>, </span>
+            }
+            @Model.Country?.CountryName
+        </p>
+
+        <section class="mt-4">
+            <h2 class="h4">Overview</h2>
+            @if (!string.IsNullOrWhiteSpace(Model.DescriptionHtml))
+            {
+                @Html.Raw(Model.DescriptionHtml)
+            }
+            else
+            {
+                <p>Details will be updated shortly.</p>
+            }
+        </section>
+
+        <section class="mt-4">
+            <h2 class="h4">Courses Offered</h2>
+
+            @if (Model.InstituteCourses == null || !Model.InstituteCourses.Any())
+            {
+                <p>Course information will be updated soon.</p>
+            }
+            else
+            {
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th>Course Name</th>
+                            <th>Category</th>
+                            <th>Level</th>
+                            <th>Duration</th>
+                            <th>Fees</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ic in Model.InstituteCourses.OrderBy(ic => ic.Course.CourseName))
+                        {
+                            <tr>
+                                <td>
+                                    @(ic.Course.CourseNameTemplate != null &&
+                                      !string.IsNullOrWhiteSpace(ic.Course.CourseNameTemplate.CourseName)
+                                        ? ic.Course.CourseNameTemplate.CourseName
+                                        : ic.Course.CourseName)
+                                </td>
+                                <td>@ic.Course.CourseName</td>
+                                <td>@ic.Course.Category?.Name</td>
+                                <td>
+                                    @if (ic.Course.Level != null &&
+                                         !string.IsNullOrWhiteSpace(ic.Course.Level.LevelName))
+                                    {
+                                        @ic.Course.Level.LevelName
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(ic.DurationText))
+                                    {
+                                        @ic.DurationText
+                                    }
+                                    else if (ic.DurationYears.HasValue)
+                                    {
+                                        @($"{ic.DurationYears.Value} years")
+                                    }
+                                </td>
+                                <td>
+                                    @if (ic.CostMin.HasValue || ic.CostMax.HasValue)
+                                    {
+                                        var currency = string.IsNullOrWhiteSpace(ic.CostCurrency)
+                                            ? "Rs"
+                                            : ic.CostCurrency;
+
+                                        if (ic.CostMin.HasValue && ic.CostMax.HasValue && ic.CostMin != ic.CostMax)
+                                        {
+                                            @($"{currency} {ic.CostMin:N0} – {ic.CostMax:N0}")
+                                        }
+                                        else if (ic.CostMin.HasValue)
+                                        {
+                                            @($"{currency} {ic.CostMin:N0}")
+                                        }
+                                        else if (ic.CostMax.HasValue)
+                                        {
+                                            @($"{currency} {ic.CostMax:N0}")
+                                        }
+
+                                        if (ic.IsApproximateCost == true)
+                                        {
+                                            <span> (approx)</span>
+                                        }
+
+                                        if (!string.IsNullOrWhiteSpace(ic.CostPer))
+                                        {
+                                            <span> / @ic.CostPer</span>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+
+        <!-- Buttons directly under college + course details -->
+        <div class="mt-4 mb-4">
+            <h2 class="h5 mb-3">Interested in this institute?</h2>
+
+            <!-- Uses existing JS: opens enquiry modal -->
+            <p></><a href="#"
+               class="btn btn-primary me-2 btn-enquiry"
+               data-id="@Model.InstituteId"
+               data-college="@Model.InstituteName">
+                Send Enquiry
+            </a></p></>
+
+            <!-- Uses existing JS: opens phone reveal modal -->
+            <button type="button"
+                    class="btn btn-outline-secondary btn-phone-details"
+                    data-id="@Model.InstituteId">
+                Click here for phone number
+            </button>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        @* empty for now, or add side content later *@
+    </div>
+</div>
+
+<!-- Hidden fields for listing enquiry JS -->
+<input type="hidden" id="listinginstituteid" value="0" />
+<input type="hidden" id="listingcollege" value="" />
+<input type="hidden" id="listingpageurl" value="@Context.Request?.Path" />

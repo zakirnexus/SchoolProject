@@ -11,8 +11,8 @@ var sidebarStyle = (colClass == "col-md-2") ? "font-size:12px;" : "";
 
 		<!-- ✅ DYNAMIC SIDEBAR -->
 		@{
-		var sidebar = ViewBag.Sidebar as dynamic;
-		}
+		var sidebar = ViewBag.Sidebar as SchoolProject.Models.ViewModels.SidebarViewModel;
+	}
 
 		@if (sidebar != null && sidebar.Sections != null)
 		{

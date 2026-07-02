@@ -1,0 +1,112 @@
+@model SchoolProject.Models.StudyAbroad.IntlInstitute
+
+@{
+    Layout = "_LayoutAdmin";
+    ViewData["Title"] = "Create Institute";
+    var countries = ViewBag.Countries as IEnumerable<SchoolProject.Models.StudyAbroad.Country>;
+    var cities = ViewBag.Cities as IEnumerable<SchoolProject.Models.StudyAbroad.IntlCity>;
+}
+
+<h1 class="mb-3">Create Study Abroad Institute</h1>
+
+<form asp-action="Create" asp-controller="AdminStudyAbroadInstitute" method="post">
+    <div class="mb-3">
+        <label asp-for="InstituteName" class="form-label"></label>
+        <input asp-for="InstituteName" class="form-control" />
+        <span asp-validation-for="InstituteName" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="InstituteNameAlt" class="form-label"></label>
+        <input asp-for="InstituteNameAlt" class="form-control" />
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Country</label>
+            <select asp-for="CountryId" class="form-select">
+                <option value="">-- Select Country --</option>
+                @if (countries != null)
+                {
+                    foreach (var c in countries)
+                    {
+                        <option value="@c.CountryId">@c.CountryName</option>
+                    }
+                }
+            </select>
+            <span asp-validation-for="CountryId" class="text-danger"></span>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">City</label>
+            <select asp-for="CityId" class="form-select">
+                <option value="">-- Select City --</option>
+                @if (cities != null)
+                {
+                    foreach (var c in cities)
+                    {
+                        <option value="@c.CityId">@c.CityName</option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Slug" class="form-label">Slug (optional)</label>
+        <input asp-for="Slug" class="form-control" />
+        <small class="text-muted">If left blank, a slug will be generated from the name.</small>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="UniversityName" class="form-label"></label>
+        <input asp-for="UniversityName" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Address" class="form-label"></label>
+        <textarea asp-for="Address" class="form-control" rows="3"></textarea>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="Pincode" class="form-label"></label>
+            <input asp-for="Pincode" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="Locality" class="form-label"></label>
+            <input asp-for="Locality" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="Telephone" class="form-label"></label>
+            <input asp-for="Telephone" class="form-control" />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="Email" class="form-label"></label>
+            <input asp-for="Email" class="form-control" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="WebsiteUrl" class="form-label"></label>
+            <input asp-for="WebsiteUrl" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="DescriptionHtml" class="form-label">Description (HTML)</label>
+        <textarea asp-for="DescriptionHtml" class="form-control" rows="5"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Status" class="form-label"></label>
+        <input asp-for="Status" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" asp-controller="AdminStudyAbroadInstitute" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

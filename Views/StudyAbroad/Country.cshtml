@@ -1,0 +1,41 @@
+@model SchoolProject.Models.StudyAbroad.Country
+@{
+    ViewData["Title"] = $"Study Abroad – {Model.CountryName}";
+}
+
+<h1>Study Abroad in @Model.CountryName</h1>
+
+@if (Model.Institutes == null || !Model.Institutes.Any())
+{
+    <p>No institutes found for this country.</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var inst in Model.Institutes.OrderBy(i => i.InstituteName))
+        {
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 style="margin-bottom: 0.6rem;">
+                            <a asp-controller="StudyAbroad"
+                               asp-action="Institute"
+                               asp-route-countrySlug="@Model.Slug"
+                               asp-route-instituteSlug="@inst.Slug">
+                                @inst.InstituteName
+                            </a>
+                        </h2>
+                        <p class="mb-1 text-muted">
+                            @if (inst.City != null)
+                            {
+                                @inst.City.CityName<span>, </span>
+                            }
+                            @Model.CountryName
+                        </p>
+                        
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
