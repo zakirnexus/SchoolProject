@@ -38,6 +38,7 @@ namespace SchoolProject.Controllers
         private readonly ReCaptchaService _recaptchaService;
         private readonly IMemoryCache _cache;
         private readonly IListingCourseResolver _listingCourseResolver;
+        private readonly IDisplayNameService _displayNameService;
 
         public CollegeController(
             AppDbContext context,
@@ -283,20 +284,11 @@ else
             var collegeList = ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
             // Build display name (supports specialization pages)
-				string courseDisplayName = courseObj.CourseName;
-
-				if (specializationId.HasValue)
-				{
-					var specialization = _context.Specializations
-						.FirstOrDefault(s =>
-							s.SpecializationId == specializationId.Value);
-
-					if (specialization != null)
-					{
-						courseDisplayName =
-							$"{courseObj.CourseName} {specialization.SpecializationName}";
-					}
-				}
+				string courseDisplayName =
+                await _displayNameService.GetCourseDisplayNameAsync(
+                    courseObj.CourseId,
+                    courseObj.CourseName,
+                    specializationId);
 
 				// ViewBag
 				ViewBag.TotalRecords = totalRecords;

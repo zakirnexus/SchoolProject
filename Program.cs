@@ -22,6 +22,7 @@ builder.Services.AddScoped<IListingService, ListingService>();
 builder.Services.AddScoped<ICourseResolver, CourseResolver>();
 builder.Services.AddScoped<ICityResolver, CityResolver>();
 builder.Services.AddScoped<IListingCourseResolver, ListingCourseResolver>();
+builder.Services.AddScoped<IDisplayNameService, DisplayNameService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
