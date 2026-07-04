@@ -37,6 +37,7 @@ namespace SchoolProject.Controllers
         private readonly EmailService _emailService;
         private readonly ReCaptchaService _recaptchaService;
         private readonly IMemoryCache _cache;
+        private readonly IListingCourseResolver _listingCourseResolver;
 
         public CollegeController(
             AppDbContext context,
@@ -45,7 +46,8 @@ namespace SchoolProject.Controllers
             ReCaptchaService recaptchaService,
             IMemoryCache cache,
             IListingService listingService,
-            ICityResolver cityResolver)
+            ICityResolver cityResolver,
+            IListingCourseResolver listingCourseResolver)
         {
             _context = context;
             _contentService = contentService;
@@ -54,12 +56,13 @@ namespace SchoolProject.Controllers
             _cache = cache;
             _listingService = listingService;
             _cityResolver = cityResolver;
+            _listingCourseResolver = listingCourseResolver;
         }
 
         // ===== SEO URL: /{course}-coaching-in-{city} =====
         [HttpGet]
-        [Route("{course}-in-{city}")]
-        public IActionResult CoachingList(
+        [Route("{course}-coaching-in-{city}")]
+        public async Task<IActionResult> CoachingList(
             string course,
             string city,
             int page = 1,
@@ -71,7 +74,7 @@ namespace SchoolProject.Controllers
         {
             ViewBag.IsCoaching = true;
 
-            return List(
+            return await List(
                 course,
                 city,
                 page,
@@ -85,7 +88,7 @@ namespace SchoolProject.Controllers
         // ===== SEO URL: /{course}-colleges-in-{city} =====
         [HttpGet]
         [Route("{course}-colleges-in-{city}")]
-        public IActionResult List(
+        public async Task<IActionResult> List(
             string course,
             string city,
             int page = 1,
@@ -113,7 +116,14 @@ namespace SchoolProject.Controllers
                     .Contains("-coaching-in-",
                         StringComparison.OrdinalIgnoreCase);
             int? specializationId = null;
-
+        var resolution = await _listingCourseResolver.ResolveAsync(
+            course,
+            isCoaching);
+        if (!resolution.Success)
+        {
+            // Do nothing yet.
+            // Existing controller logic is still the source of truth.
+        }
 // First try CoursePages
 var pageObj = _context.CoursePages
     .FirstOrDefault(p =>
@@ -166,12 +176,10 @@ else
     }
 }
 
-            var cityObj = _cityResolver
-                .ResolveAsync(city)
-                .Result;
+            var cityObj = await _cityResolver.ResolveAsync(city);
 
             if (cityObj == null)
-                return Content($"No city found for: '{city}'");
+                return NotFound();
 
             // Base query
             var baseQuery = _context.Colleges
