@@ -297,25 +297,12 @@ else
 				ViewBag.CourseName = courseDisplayName;
 				ViewBag.CityName = cityObj.CityName;
 
-				ViewBag.SelLocality =
-					(!string.IsNullOrWhiteSpace(locality) &&
-					 int.TryParse(locality, out int selLid))
-						? selLid
-						: (int?)null;
-
-				ViewBag.SelNsewc = nsewc;
-				ViewBag.SelCoed = coedId;
-				ViewBag.SelOwnership = ownershipId;
-				ViewBag.SelFees = feesRange;
-
-				ViewBag.FiltersActive =
-					locality != null ||
-					nsewc != null ||
-					coedId != null ||
-					ownershipId != null ||
-					feesRange != null;
-
-				ViewBag.ShowFilterPanel = true;
+				PopulateFilterState(
+                    locality,
+                    nsewc,
+                    coedId,
+                    ownershipId,
+                    feesRange);
                 ViewBag.IsCoaching = isCoaching;
 				
 				ViewBag.Specializations = _context.Specializations
@@ -387,7 +374,7 @@ else
 
             // Ordering
             var ordered = ApplyOrdering(query);
-            
+
             // Pagination
             var pageResult = ApplyPaging(
                 ordered,
@@ -407,15 +394,12 @@ else
             ViewBag.CourseName = category?.CategoryName;
             ViewBag.CityName = cityObj.CityName;
 
-            ViewBag.SelLocality = (!string.IsNullOrWhiteSpace(locality) && int.TryParse(locality, out int selLid)) ? selLid : (int?)null;
-            ViewBag.SelNsewc = nsewc;
-            ViewBag.SelCoed = coedId;
-            ViewBag.SelOwnership = ownershipId;
-            ViewBag.SelFees = feesRange;
-            ViewBag.FiltersActive = locality != null || nsewc != null || coedId != null ||
-                                    ownershipId != null || feesRange != null;
-
-            ViewBag.ShowFilterPanel = true;
+            PopulateFilterState(
+                locality,
+                nsewc,
+                coedId,
+                ownershipId,
+                feesRange);
 
             // Filter dropdowns for category pages
             ViewBag.Localities = _context.Localities
@@ -525,6 +509,33 @@ else
                         : null)
                 .ThenBy(c => c.ListingRank);
         }
+    private void PopulateFilterState(
+        string? locality,
+        string? nsewc,
+        int? coedId,
+        int? ownershipId,
+        string? feesRange)
+    {
+        ViewBag.SelLocality =
+            (!string.IsNullOrWhiteSpace(locality) &&
+            int.TryParse(locality, out int selLid))
+                ? selLid
+                : (int?)null;
+
+        ViewBag.SelNsewc = nsewc;
+        ViewBag.SelCoed = coedId;
+        ViewBag.SelOwnership = ownershipId;
+        ViewBag.SelFees = feesRange;
+
+        ViewBag.FiltersActive =
+            locality != null ||
+            nsewc != null ||
+            coedId != null ||
+            ownershipId != null ||
+            feesRange != null;
+
+        ViewBag.ShowFilterPanel = true;
+    }
 
         // ===== DETAIL PAGE =====
         [HttpGet("college/{slug}")]
