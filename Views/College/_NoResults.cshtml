@@ -1,0 +1,16 @@
+@model dynamic
+
+<div class="alert alert-warning">
+    <i class="fa fa-exclamation-circle"></i>
+    No colleges found for the selected criteria.
+
+    @if (Model.FiltersActive)
+    {
+        <span>
+            <a href="/@(Model.CourseSlug)-colleges-in-@(Model.CitySlug)">
+                Clear filters
+            </a>
+            to see all colleges.
+        </span>
+    }
+</div>

@@ -1,0 +1,27 @@
+@{
+    string courseName = ViewBag.CourseName as string ?? ViewBag.Category as string ?? "Colleges";
+    string cityName = ViewBag.CityName as string ?? "Bengaluru";
+
+    int totalRecords = ViewBag.TotalRecords is int tr ? tr : 0;
+    int totalPages = ViewBag.TotalPages is int tp ? tp : 0;
+    int currentPage = ViewBag.CurrentPage is int cp ? cp : 1;
+
+    string courseSlug = ViewBag.Course as string ?? "colleges";
+    string citySlug = ViewBag.City as string ?? "bengaluru";
+
+    bool isCoaching = ViewBag.IsCoaching == true;
+
+    string listingUrl = isCoaching
+        ? "/" + courseSlug + "-coaching-in-" + citySlug
+        : "/" + courseSlug + "-colleges-in-" + citySlug;
+
+    bool filtersActive = ViewBag.FiltersActive is bool fa && fa;
+
+    int? selLocality = ViewBag.SelLocality as int?;
+    string selNsewc = ViewBag.SelNsewc as string ?? "";
+    int? selCoed = ViewBag.SelCoed as int?;
+    int? selOwnership = ViewBag.SelOwnership as int?;
+    string selFees = ViewBag.SelFees as string ?? "";
+
+    string bottomContent = ViewBag.BottomContent as string ?? "";
+}

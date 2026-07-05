@@ -280,14 +280,13 @@ else
 }
 else
 {
-    <div class="alert alert-warning">
-        <i class="fa fa-exclamation-circle"></i>
-        No colleges found for the selected criteria.
-        @if (filtersActive)
-        {
-            <span><a href="/@(courseSlug)-colleges-in-@(citySlug)">Clear filters</a> to see all colleges.</span>
-        }
-    </div>
+    <partial name="_NoResults"
+             model="new
+             {
+                 FiltersActive = filtersActive,
+                 CourseSlug = courseSlug,
+                 CitySlug = citySlug
+             }" />
 }
 
 @if (!string.IsNullOrEmpty(bottomContent))
