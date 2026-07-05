@@ -255,21 +255,12 @@ else
 					.OrderBy(o => o.Type)
 					.ToList();
             // Apply filters
-            var query = baseQuery;
-
-            if (!string.IsNullOrWhiteSpace(locality) && int.TryParse(locality, out int localityId))
-                query = query.Where(c => c.LocalityId == localityId);
-
-            if (!string.IsNullOrWhiteSpace(nsewc))
-                query = query.Where(c => c.Locality != null &&
-                                         c.Locality.Nsewc != null &&
-                                         c.Locality.Nsewc.ToLower() == nsewc.ToLower());
-
-            if (coedId.HasValue)
-                query = query.Where(c => c.CoedId == coedId.Value);
-
-            if (ownershipId.HasValue)
-                query = query.Where(c => c.InstOwnershipId == ownershipId.Value);
+            var query = ApplyFilters(
+                baseQuery,
+                locality,
+                nsewc,
+                coedId,
+                ownershipId);
 
             // Ordering
             var ordered = query
@@ -382,21 +373,12 @@ else
                     c.CollegeCourses!.Any(cc => cc.Course!.CategoryId == categoryId && cc.IsActive));
 
             // Apply filters
-            var query = baseQuery;
-
-            if (!string.IsNullOrWhiteSpace(locality) && int.TryParse(locality, out int localityId))
-                query = query.Where(c => c.LocalityId == localityId);
-
-            if (!string.IsNullOrWhiteSpace(nsewc))
-                query = query.Where(c => c.Locality != null &&
-                                         c.Locality.Nsewc != null &&
-                                         c.Locality.Nsewc.ToLower() == nsewc.ToLower());
-
-            if (coedId.HasValue)
-                query = query.Where(c => c.CoedId == coedId.Value);
-
-            if (ownershipId.HasValue)
-                query = query.Where(c => c.InstOwnershipId == ownershipId.Value);
+           var query = ApplyFilters(
+                baseQuery,
+                locality,
+                nsewc,
+                coedId,
+                ownershipId);
 
             // Ordering
             var ordered = query
@@ -475,6 +457,40 @@ else
 
             return View("Index", collegeList);
         }
+        
+    private IQueryable<College> ApplyFilters(
+        IQueryable<College> query,
+        string? locality,
+        string? nsewc,
+        int? coedId,
+        int? ownershipId)
+    {
+        if (!string.IsNullOrWhiteSpace(locality) &&
+            int.TryParse(locality, out int localityId))
+        {
+            query = query.Where(c => c.LocalityId == localityId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(nsewc))
+        {
+            query = query.Where(c =>
+                c.Locality != null &&
+                c.Locality.Nsewc != null &&
+                c.Locality.Nsewc.ToLower() == nsewc.ToLower());
+        }
+
+        if (coedId.HasValue)
+        {
+            query = query.Where(c => c.CoedId == coedId.Value);
+        }
+
+        if (ownershipId.HasValue)
+        {
+            query = query.Where(c => c.InstOwnershipId == ownershipId.Value);
+        }
+
+        return query;
+    }
 
         // ===== DETAIL PAGE =====
         [HttpGet("college/{slug}")]
