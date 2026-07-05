@@ -273,8 +273,14 @@ else
                 .ThenBy(c => c.ListingRank);
 
             // Pagination
-            int totalRecords = query.Count();
-            var collegeList = ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var pageResult = ApplyPaging(
+                ordered,
+                query,
+                page,
+                pageSize);
+
+            int totalRecords = pageResult.TotalRecords;
+            var collegeList = pageResult.Colleges;
 
             // Build display name (supports specialization pages)
 				string courseDisplayName =
@@ -393,8 +399,14 @@ else
                 .ThenBy(c => c.ListingRank);
 
             // Pagination
-            int totalRecords = query.Count();
-            var collegeList = ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var pageResult = ApplyPaging(
+                ordered,
+                query,
+                page,
+                pageSize);
+
+            int totalRecords = pageResult.TotalRecords;
+            var collegeList = pageResult.Colleges;
 
             // ViewBag - ALL properties the view expects
             ViewBag.TotalRecords = totalRecords;
@@ -495,6 +507,21 @@ else
 
         return query;
     }
+    private (int TotalRecords, List<College> Colleges) ApplyPaging(
+    IQueryable<College> orderedQuery,
+    IQueryable<College> filteredQuery,
+    int page,
+    int pageSize)
+        {
+            int totalRecords = filteredQuery.Count();
+
+            var colleges = orderedQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return (totalRecords, colleges);
+        }
 
         // ===== DETAIL PAGE =====
         [HttpGet("college/{slug}")]
