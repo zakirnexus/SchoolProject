@@ -265,12 +265,7 @@ else
                 ownershipId);
 
             // Ordering
-            var ordered = query
-                .OrderBy(c =>
-                    c.ListingRank == null || c.ListingRank == 0 ? 2 :
-                    c.IsSponsored ? 1 : 0)
-                .ThenBy(c => c.ListingRank == 0 || c.ListingRank == null ? c.InstituteName : null)
-                .ThenBy(c => c.ListingRank);
+            var ordered = ApplyOrdering(query);
 
             // Pagination
             var pageResult = ApplyPaging(
@@ -391,13 +386,8 @@ else
 
 
             // Ordering
-            var ordered = query
-                .OrderBy(c =>
-                    c.ListingRank == null || c.ListingRank == 0 ? 2 :
-                    c.IsSponsored ? 1 : 0)
-                .ThenBy(c => c.ListingRank == 0 || c.ListingRank == null ? c.InstituteName : null)
-                .ThenBy(c => c.ListingRank);
-
+            var ordered = ApplyOrdering(query);
+            
             // Pagination
             var pageResult = ApplyPaging(
                 ordered,
@@ -521,6 +511,19 @@ else
                 .ToList();
 
             return (totalRecords, colleges);
+        }
+    private IQueryable<College> ApplyOrdering(IQueryable<College> query)
+        {
+            return query
+                .OrderBy(c =>
+                    c.ListingRank == null || c.ListingRank == 0
+                        ? 2
+                        : c.IsSponsored ? 1 : 0)
+                .ThenBy(c =>
+                    c.ListingRank == null || c.ListingRank == 0
+                        ? c.InstituteName
+                        : null)
+                .ThenBy(c => c.ListingRank);
         }
 
         // ===== DETAIL PAGE =====
