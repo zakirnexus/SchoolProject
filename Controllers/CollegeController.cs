@@ -48,7 +48,8 @@ namespace SchoolProject.Controllers
             IMemoryCache cache,
             IListingService listingService,
             ICityResolver cityResolver,
-            IListingCourseResolver listingCourseResolver)
+            IListingCourseResolver listingCourseResolver,
+            IDisplayNameService displayNameService)
         {
             _context = context;
             _contentService = contentService;
@@ -58,6 +59,7 @@ namespace SchoolProject.Controllers
             _listingService = listingService;
             _cityResolver = cityResolver;
             _listingCourseResolver = listingCourseResolver;
+            _displayNameService = displayNameService;
         }
 
         // ===== SEO URL: /{course}-coaching-in-{city} =====
@@ -379,6 +381,8 @@ else
                 nsewc,
                 coedId,
                 ownershipId);
+
+
 
             // Ordering
             var ordered = query
