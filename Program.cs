@@ -6,6 +6,8 @@ using SchoolProject.Services;
 using SchoolProject.Controllers;
 using SchoolProject.Services.Education;
 using SchoolProject.Services.Education.Resolvers;
+using SchoolProject.Services.Search.Interfaces;
+using SchoolProject.Services.Search.Implementations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,8 @@ builder.Configuration
 // ===== SERVICES =====
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IListingService, ListingService>();
+builder.Services.AddScoped<ISearchService, SearchService>();
+builder.Services.AddScoped<ISchoolSearchService, SchoolSearchService>();
 builder.Services.AddScoped<ICourseResolver, CourseResolver>();
 builder.Services.AddScoped<ICityResolver, CityResolver>();
 builder.Services.AddScoped<IListingCourseResolver, ListingCourseResolver>();

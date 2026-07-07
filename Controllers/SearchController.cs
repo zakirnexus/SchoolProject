@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SchoolProject.Data;
 using SchoolProject.Models.Search;
+using SchoolProject.Services.Search.Interfaces;
 
 namespace SchoolProject.Controllers
 {
@@ -9,9 +10,14 @@ namespace SchoolProject.Controllers
     {
         private readonly AppDbContext _context;
 
-        public SearchController(AppDbContext context)
+        private readonly ISchoolSearchService _schoolSearchService;
+
+        public SearchController(
+            AppDbContext context,
+            ISchoolSearchService schoolSearchService)
         {
             _context = context;
+            _schoolSearchService = schoolSearchService;
         }
 
         public IActionResult Index(string q)
@@ -26,25 +32,7 @@ namespace SchoolProject.Controllers
             var words = q.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             // Schools
-            var schools = _context.Schools
-                .Include(s => s.City)
-                .Where(s =>
-                    words.All(w =>
-                        EF.Functions.Like(s.InstituteName, "%" + w + "%") ||
-                        (s.Keyword != null && EF.Functions.Like(s.Keyword, "%" + w + "%")) ||
-                        (s.City.CityName != null && EF.Functions.Like(s.City.CityName, "%" + w + "%"))
-                    )
-                )
-                .Select(s => new SearchResultViewModel
-                {
-                    Title = s.InstituteName,
-                    Url = "/school/" + s.InstituteSlug,
-                    Type = "School",
-                    Description = s.Address
-                })
-                .Take(20)
-                .ToList();
-
+            var schools = _schoolSearchService.Search(words);
             results.AddRange(schools);
 
             // Colleges

@@ -292,7 +292,6 @@ else
 				ViewBag.City = city;
 				ViewBag.CourseId = courseObj.CourseId;
 				ViewBag.SpecializationId = specializationId;
-				ViewBag.CourseId = courseObj.CourseId;
 				
 				ViewBag.CourseName = courseDisplayName;
 				ViewBag.CityName = cityObj.CityName;
