@@ -24,6 +24,7 @@ builder.Services.AddScoped<IListingService, ListingService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<ISchoolSearchService, SchoolSearchService>();
 builder.Services.AddScoped<ICollegeSearchService, CollegeSearchService>();
+builder.Services.AddScoped<ICourseSearchService, CourseSearchService>();
 builder.Services.AddScoped<ICourseResolver, CourseResolver>();
 builder.Services.AddScoped<ICityResolver, CityResolver>();
 builder.Services.AddScoped<IListingCourseResolver, ListingCourseResolver>();

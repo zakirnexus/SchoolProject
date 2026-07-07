@@ -12,15 +12,18 @@ namespace SchoolProject.Controllers
 
         private readonly ISchoolSearchService _schoolSearchService;
         private readonly ICollegeSearchService _collegeSearchService;
+        private readonly ICourseSearchService _courseSearchService;
 
         public SearchController(
             AppDbContext context,
             ISchoolSearchService schoolSearchService,
-            ICollegeSearchService collegeSearchService)
+            ICollegeSearchService collegeSearchService,
+            ICourseSearchService courseSearchService)
         {
             _context = context;
             _schoolSearchService = schoolSearchService;
             _collegeSearchService = collegeSearchService;
+            _courseSearchService = courseSearchService;
         }
 
         public IActionResult Index(string q)
@@ -43,22 +46,7 @@ namespace SchoolProject.Controllers
             results.AddRange(colleges);
 
             // Courses
-            var courses = _context.Courses
-                .Where(c =>
-                    words.All(w =>
-                        EF.Functions.Like(c.CourseName, "%" + w + "%") ||
-                        (c.ShortName != null && EF.Functions.Like(c.ShortName, "%" + w + "%"))
-                    )
-                )
-                .Select(c => new SearchResultViewModel
-                {
-                    Title = c.CourseName,
-                    Url = "/courses/" + c.CourseSlug,
-                    Type = "Course",
-                    Description = c.ShortName
-                })
-                .Take(20)
-                .ToList();
+            var courses = _courseSearchService.Search(words);
 
             results.AddRange(courses);
 

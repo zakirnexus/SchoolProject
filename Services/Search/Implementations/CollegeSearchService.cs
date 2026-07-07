@@ -16,20 +16,23 @@ namespace SchoolProject.Services.Search.Implementations
 
         public List<SearchResultViewModel> Search(string[] words)
         {
-            return _context.Colleges
-                .Where(c =>
-                    words.All(w =>
-                        EF.Functions.Like(c.InstituteName, "%" + w + "%") ||
-                        (c.Address != null &&
-                         EF.Functions.Like(c.Address, "%" + w + "%"))
-                    ))
-                .Select(c => new SearchResultViewModel
-                {
-                    Title = c.InstituteName,
-                    Url = "/college/" + c.InstituteSlug,
-                    Type = "College",
-                    Description = c.Address
-                })
+            var query = from college in _context.Colleges
+                        join cc in _context.CollegeCourses
+                            on college.InstituteId equals cc.InstituteId
+                        join course in _context.Courses
+                            on cc.CourseId equals course.CourseId
+                        where words.All(w =>
+                            EF.Functions.Like(course.CourseName, "%" + w + "%"))
+                        select new SearchResultViewModel
+                        {
+                            Title = college.InstituteName,
+                            Url = "/college/" + college.InstituteSlug,
+                            Type = "College",
+                            Description = college.Address
+                        };
+
+            return query
+                .Distinct()
                 .Take(20)
                 .ToList();
         }
