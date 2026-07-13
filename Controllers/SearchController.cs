@@ -13,20 +13,23 @@ namespace SchoolProject.Controllers
         private readonly ISchoolSearchService _schoolSearchService;
         private readonly ICollegeSearchService _collegeSearchService;
         private readonly ICourseSearchService _courseSearchService;
+        private readonly ISpecializationSearchService _specializationSearchService;
 
         public SearchController(
             AppDbContext context,
             ISchoolSearchService schoolSearchService,
             ICollegeSearchService collegeSearchService,
-            ICourseSearchService courseSearchService)
+            ICourseSearchService courseSearchService,
+            ISpecializationSearchService specializationSearchService)
         {
             _context = context;
             _schoolSearchService = schoolSearchService;
             _collegeSearchService = collegeSearchService;
             _courseSearchService = courseSearchService;
+            _specializationSearchService = specializationSearchService;
         }
 
-        public IActionResult Index(string q)
+        public IActionResult Index(string q, int page = 1)
         {
             var results = new List<SearchResultViewModel>();
 
@@ -47,17 +50,50 @@ namespace SchoolProject.Controllers
 
             // Courses
             var courses = _courseSearchService.Search(words);
-
             results.AddRange(courses);
 
+            // Specializations
+            var specializations = _specializationSearchService.Search(words);
+            results.AddRange(specializations);
+
+            const int PageSize = 25;
+
             results = results
-                .OrderBy(r => r.Type)
+                .GroupBy(r => r.Url)
+                .Select(g =>
+                {
+                    // Prefer the result with the highest score.
+                    // If scores tie, prefer the one with a richer description.
+                    return g
+                        .OrderByDescending(x => x.Score)
+                        .ThenByDescending(x => x.Description?.Length ?? 0)
+                        .First();
+                })
+                .OrderByDescending(r => r.Score)
+                .ThenBy(r => r.Type)
                 .ThenBy(r => r.Title)
                 .ToList();
 
-            ViewBag.Query = q;
+            var totalResults = results.Count;
 
-            return View(results);
+            ViewBag.Query = q;
+            ViewBag.ResultCount = totalResults;
+
+            ViewBag.CollegeCount = results.Count(r => r.Type == "College");
+            ViewBag.SchoolCount = results.Count(r => r.Type == "School");
+            ViewBag.CourseCount = results.Count(r => r.Type == "Course");
+
+            ViewBag.Page = page;
+            ViewBag.PageSize = PageSize;
+            ViewBag.TotalResults = totalResults;
+            ViewBag.TotalPages = (int)Math.Ceiling(totalResults / (double)PageSize);
+
+            var pagedResults = results
+                .Skip((page - 1) * PageSize)
+                .Take(PageSize)
+                .ToList();
+
+            return View(pagedResults);
         }
 
         [HttpGet]

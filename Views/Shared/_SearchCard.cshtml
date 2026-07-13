@@ -1,0 +1,53 @@
+@model SchoolProject.Models.Search.SearchResultViewModel
+
+<div class="be-card">
+
+    <img class="be-campus"
+         src="@Model.CampusImage"
+         loading="lazy" />
+
+    <div class="be-body">
+
+        <img class="be-logo"
+             src="@Model.Logo" />
+
+        <div class="be-info">
+
+            <h2>
+
+                <a href="@Model.Url">
+
+                    @Model.Title
+
+                </a>
+
+            </h2>
+
+            <div class="be-address">
+
+                @Model.Address
+
+            </div>
+
+            <div class="be-description">
+
+                @Html.Raw(Model.Description)
+
+            </div>
+
+            <div class="be-actions">
+
+                <a href="@Model.Url"
+                   class="be-btn-primary">
+
+                    View College
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

@@ -176,12 +176,30 @@
                 // Detect college pages: URL contains "-colleges-in-" or starts with "/college/"
                 bool isCollegePage = path.Contains("-colleges-in-") || path.StartsWith("/college/");
 
+                bool isSearchPage = path.StartsWith("/search");
+
                 // Column widths:
                 //   Home page          -> col-md-12 (no sidebar, no filter)
                 //   List + filter      -> filter col-md-2 | main col-md-8 | sidebar col-md-2
                 //   Other inner pages  -> main col-md-8 | sidebar col-md-4
-                string mainClass    = isHomePage ? "col-md-12" : (showFilter ? "col-md-8" : "col-md-8");
-                string sidebarClass = showFilter ? "col-md-2" : "col-md-4";
+                string mainClass = "";
+                string sidebarClass = "";
+
+                if (isSearchPage)
+                {
+                    mainClass = "col-md-10";
+                    sidebarClass = "col-md-2";
+                }
+                else
+                {
+                    mainClass = isHomePage
+                        ? "col-md-12"
+                        : (showFilter ? "col-md-8" : "col-md-8");
+
+                    sidebarClass = showFilter
+                        ? "col-md-2"
+                        : "col-md-4";
+                }
             }
 
             @* -- On filter pages: breadcrumb + SEO block span full width ABOVE the 3 columns. -- *@

@@ -46,10 +46,11 @@ namespace SchoolProject.Services.Search.Implementations
                     Title = c.InstituteName,
                     Url = "/college/" + c.InstituteSlug,
                     Type = "College",
-                    Description = c.Address
+                    Description = c.Address,
+                    Score = 75
                 })
                 .Distinct()
-                .Take(20)
+                .OrderBy(c => c.Title)
                 .ToList();
         }
     }

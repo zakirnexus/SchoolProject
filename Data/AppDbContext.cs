@@ -40,6 +40,7 @@ namespace SchoolProject.Data
         public DbSet<SeoContentCollege> SeoContentColleges { get; set; }
         public DbSet<Specialization> Specializations { get; set; }
         public DbSet<CoursePage> CoursePages { get; set; }
+        public DbSet<CourseAlias> CourseAliases { get; set; }
         public DbSet<AdminUser> AdminUsers { get; set; }
 
         // STUDY ABROAD (International)

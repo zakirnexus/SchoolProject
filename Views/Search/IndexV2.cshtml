@@ -1,0 +1,33 @@
+@model List<SchoolProject.Models.Search.SearchResultViewModel>
+
+@{
+    ViewData["Title"] = "Search";
+    Layout = "_Layout";
+}
+
+@section Styles
+{
+    <link rel="stylesheet" href="~/css/searchv2.css" />
+}
+
+<div class="be-page">
+
+    @await Html.PartialAsync("_SearchHeader")
+
+    @await Html.PartialAsync("_SearchStats")
+
+    <div class="be-results">
+
+        @foreach (var item in Model)
+        {
+            @await Html.PartialAsync("_SearchCard", item)
+        }
+
+    </div>
+
+</div>
+
+@section Scripts
+{
+    <script src="~/js/searchv2.js"></script>
+}
