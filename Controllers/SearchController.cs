@@ -34,7 +34,16 @@ namespace SchoolProject.Controllers
             var results = new List<SearchResultViewModel>();
 
             if (string.IsNullOrWhiteSpace(q))
-                return View(results);
+            {
+                ViewBag.Query = "";
+
+                ViewBag.ResultCount = 0;
+                ViewBag.CollegeCount = 0;
+                ViewBag.CourseCount = 0;
+                ViewBag.SchoolCount = 0;
+
+                return View("IndexV2", results);
+            }
 
             q = q.Trim();
 
@@ -64,10 +73,43 @@ namespace SchoolProject.Controllers
                 {
                     // Prefer the result with the highest score.
                     // If scores tie, prefer the one with a richer description.
-                    return g
+                    var best = g
                         .OrderByDescending(x => x.Score)
                         .ThenByDescending(x => x.Description?.Length ?? 0)
                         .First();
+
+                    // CourseSearchService and SpecializationSearchService only
+                    // populate Title/Url/Type/Description/Score - they don't set
+                    // Logo, CampusImage, Address, etc. Since they can carry a
+                    // higher Score than CollegeSearchService/SchoolSearchService,
+                    // "best" above can end up being the sparse version even when
+                    // a richer duplicate exists in the same group.
+                    // Backfill the display fields from whichever duplicate
+                    // actually has them (identified here by a non-zero InstituteId,
+                    // since only CollegeSearchService/SchoolSearchService set it).
+                    var richest = g.FirstOrDefault(x => x.InstituteId != 0) ?? best;
+
+                    if (!ReferenceEquals(best, richest))
+                    {
+                        best.InstituteId = richest.InstituteId;
+                        best.Logo ??= richest.Logo;
+                        best.CampusImage ??= richest.CampusImage;
+                        best.Address ??= richest.Address;
+                        best.Website ??= richest.Website;
+                        best.Phone ??= richest.Phone;
+                        best.Ownership ??= richest.Ownership;
+                        best.EstablishedYear ??= richest.EstablishedYear;
+
+                        if (string.IsNullOrWhiteSpace(best.Accreditation))
+                            best.Accreditation = richest.Accreditation;
+
+                        best.Sponsored = best.Sponsored || richest.Sponsored;
+
+                        if (best.ListingRank == 0)
+                            best.ListingRank = richest.ListingRank;
+                    }
+
+                    return best;
                 })
                 .OrderByDescending(r => r.Score)
                 .ThenBy(r => r.Type)
@@ -82,7 +124,7 @@ namespace SchoolProject.Controllers
             ViewBag.CollegeCount = results.Count(r => r.Type == "College");
             ViewBag.SchoolCount = results.Count(r => r.Type == "School");
             ViewBag.CourseCount = results.Count(r => r.Type == "Course");
-
+            ViewBag.SpecializationCount = results.Count(r => r.Type == "Specialization");
             ViewBag.Page = page;
             ViewBag.PageSize = PageSize;
             ViewBag.TotalResults = totalResults;
@@ -93,7 +135,7 @@ namespace SchoolProject.Controllers
                 .Take(PageSize)
                 .ToList();
 
-            return View(pagedResults);
+            return View("IndexV2", pagedResults);
         }
 
         [HttpGet]

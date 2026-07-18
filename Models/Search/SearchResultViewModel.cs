@@ -2,7 +2,7 @@ namespace SchoolProject.Models.Search
 {
     public class SearchResultViewModel
     {
-        // Core
+        // Identity
         public int InstituteId { get; set; }
 
         public string Title { get; set; } = "";
@@ -11,36 +11,53 @@ namespace SchoolProject.Models.Search
 
         public string Type { get; set; } = "";
 
-        public int Score { get; set; }
+        // Rich UI
 
-        // College Information
         public string? Logo { get; set; }
 
         public string? CampusImage { get; set; }
 
         public string? Address { get; set; }
 
-        public string? City { get; set; }
-
         public string? Ownership { get; set; }
 
         public int? EstablishedYear { get; set; }
 
-        public bool Sponsored { get; set; }
-
-        public int ListingRank { get; set; }
-
-        // Search Information
-        public string? Description { get; set; }
-
-        public string MatchReason { get; set; } = "";
-
-        public List<string> MatchingCourses { get; set; } = new();
-
         public string? Accreditation { get; set; }
+
+        public string? Website { get; set; }
 
         public string? Phone { get; set; }
 
-        public string? Website { get; set; }
+        // Search
+
+        public List<string> MatchingCourses { get; set; }
+            = new();
+
+        public string MatchReason { get; set; } = "";
+
+        public int Score { get; set; }
+
+        // SEO
+
+        public string Description { get; set; } = "";
+
+        // Flags
+
+        public bool Sponsored { get; set; }
+
+        public bool Featured { get; set; }
+
+        public int ListingRank { get; set; }
+
+        // Future
+
+        public int? PlacementPercentage { get; set; }
+
+        public bool HostelAvailable { get; set; }
+
+        public bool WifiCampus { get; set; }
+
+        public bool ScholarshipAvailable { get; set; }
     }
 }

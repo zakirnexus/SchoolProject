@@ -31,7 +31,7 @@ namespace SchoolProject.Services.Search
             docs.AddRange(schools.Select(s => new ElasticSearchDocument
             {
                 Id = $"school-{s.InstituteId}",
-                DocType = "school",
+                EntityType = SearchEntityType.School,
                 EntityId = s.InstituteId,
                 Title = s.InstituteName,
                 Slug = s.InstituteSlug,
@@ -55,11 +55,23 @@ namespace SchoolProject.Services.Search
                 Pincode = s.Pincode,
                 Keywords = s.Keyword,
                 MetaDescription = s.MetaDescription,
-                Description = string.Join(" ", new[] { s.AdmissionCriteria, s.Extracurricular, s.ClassesLevels, s.FeesStructure }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                Description = string.Join(" ", new[]
+                {
+                    s.AdmissionCriteria,
+                    s.Extracurricular,
+                    s.ClassesLevels,
+                    s.FeesStructure
+                }.Where(x => !string.IsNullOrWhiteSpace(x))),
                 ListingRank = s.ListingRank,
                 IsSponsored = s.IsSponsored,
                 IsActive = s.IsActive,
-                Suggest = new[] { s.InstituteName ?? string.Empty, s.InstituteSlug ?? string.Empty }.Where(x => !string.IsNullOrWhiteSpace(x))
+                Suggest = new[]
+                {
+                    s.InstituteName ?? string.Empty,
+                    s.InstituteSlug ?? string.Empty
+                }
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList()
             }));
 
             return docs;

@@ -100,6 +100,7 @@
             padding: 10px;
         }
     </style>
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="page-sub-page">
 <!-- Wrapper -->
@@ -366,8 +367,7 @@
 
 </div> <!-- /.wrapper -->
 
-@RenderSection("Scripts", required: false)
 @RenderSection("MetaTags", required: false)
-
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

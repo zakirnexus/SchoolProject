@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace SchoolProject.Models.Search
@@ -5,7 +6,7 @@ namespace SchoolProject.Models.Search
     public class ElasticSearchDocument
     {
         public string Id { get; set; } = "";
-        public string DocType { get; set; } = "";
+        public SearchEntityType EntityType { get; set; }
         public int EntityId { get; set; }
         public string? Title { get; set; }
         public string? Slug { get; set; }
@@ -50,6 +51,34 @@ namespace SchoolProject.Models.Search
         public bool IsFeatured { get; set; }
         public bool IsActive { get; set; }
 
-        public IEnumerable<string> Suggest { get; set; } = new List<string>();
+        public string? Logo { get; set; }
+
+        public string? CampusImage { get; set; }
+
+        public string? Accreditation { get; set; }
+
+        public int? EstablishedYear { get; set; }
+
+        public string? Website { get; set; }
+
+        public string? Phone { get; set; }
+
+        public int? PlacementPercentage { get; set; }
+
+        public bool HostelAvailable { get; set; }
+
+        public bool WifiCampus { get; set; }
+
+        public bool ScholarshipAvailable { get; set; }
+
+        public string? SearchText { get; set; }
+
+        public double BoostScore { get; set; }
+
+        public DateTime IndexedOn { get; set; } = DateTime.UtcNow;
+
+        public string? Source { get; set; }
+
+        public List<string> Suggest { get; set; } = new();
     }
 }

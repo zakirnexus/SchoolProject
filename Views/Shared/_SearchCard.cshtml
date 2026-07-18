@@ -1,17 +1,53 @@
 @model SchoolProject.Models.Search.SearchResultViewModel
 
-<div class="be-card">
+@{
+    const string DefaultLogo = "/images/ui/default-logo.webp";
+    const string DefaultCampus = "/images/ui/default-campus.webp";
 
-    <img class="be-campus"
-         src="@Model.CampusImage"
-         loading="lazy" />
+    // Falls back when the DB value is NULL/empty.
+    var campusImage = string.IsNullOrWhiteSpace(Model.CampusImage)
+        ? DefaultCampus
+        : Model.CampusImage;
 
-    <div class="be-body">
+    var logo = string.IsNullOrWhiteSpace(Model.Logo)
+        ? DefaultLogo
+        : Model.Logo;
+}
 
-        <img class="be-logo"
-             src="@Model.Logo" />
+<article class="be-card">
 
-        <div class="be-info">
+    <div class="be-campus-wrap">
+
+        <img src="@campusImage"
+             alt="@Model.Title"
+             class="be-campus"
+             loading="lazy"
+             onerror="this.onerror=null;this.src='@DefaultCampus';" />
+
+        @if (Model.Sponsored)
+        {
+            <div class="be-featured">
+
+                ★ Featured
+
+            </div>
+        }
+
+    </div>
+
+    <div class="be-content">
+
+        <div class="be-logo-column">
+
+            <img src="@logo"
+                 class="be-logo"
+                 alt="@Model.Title Logo"
+                 loading="lazy"
+                 onerror="this.onerror=null;this.src='@DefaultLogo';" />
+
+        </div>
+
+        <div class="be-details">
 
             <h2>
 
@@ -23,11 +59,77 @@
 
             </h2>
 
-            <div class="be-address">
+            @if (!string.IsNullOrWhiteSpace(Model.Address))
+            {
+                <div class="be-address">
 
-                @Model.Address
+                    📍 @Model.Address
+
+                </div>
+            }
+
+            <div class="be-pill-row">
+
+                @if (!string.IsNullOrWhiteSpace(Model.Ownership))
+                {
+                    <span class="be-pill">
+
+                        🏛 @Model.Ownership
+
+                    </span>
+                }
+
+                @if (Model.EstablishedYear.HasValue)
+                {
+                    <span class="be-pill">
+
+                        📅 Since @Model.EstablishedYear
+
+                    </span>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Model.Accreditation))
+                {
+                    <span class="be-pill">
+
+                        ⭐ @Model.Accreditation
+
+                    </span>
+                }
 
             </div>
+
+            @if (Model.MatchingCourses.Any())
+            {
+                <div class="be-section-title">
+
+                    Matches your search
+
+                </div>
+
+                <div class="be-chip-container">
+
+                    @foreach (var course in Model.MatchingCourses.Take(6))
+                    {
+                        <a href="/search?q=@Uri.EscapeDataString(course)"
+                           class="be-chip">
+
+                            @course
+
+                        </a>
+                    }
+
+                    @if (Model.MatchingCourses.Count > 6)
+                    {
+                        <span class="be-chip-more">
+
+                            +@(Model.MatchingCourses.Count - 6) more
+
+                        </span>
+                    }
+
+                </div>
+            }
 
             <div class="be-description">
 
@@ -38,9 +140,16 @@
             <div class="be-actions">
 
                 <a href="@Model.Url"
-                   class="be-btn-primary">
+                   class="be-btn be-btn-primary">
 
                     View College
+
+                </a>
+
+                <a href="@Model.Url#apply"
+                   class="be-btn be-btn-secondary">
+
+                    Apply Online
 
                 </a>
 
@@ -50,4 +159,4 @@
 
     </div>
 
-</div>
+</article>
