@@ -10,7 +10,8 @@ namespace SchoolProject.Services.Elasticsearch.Interfaces
     public interface IElasticBulkIndexer
     {
         /// <summary>
-        /// Rebuilds the entire search index.
+        /// Rebuilds the entire search index: schools, colleges, courses,
+        /// and specializations.
         /// </summary>
         Task RebuildIndexAsync(CancellationToken cancellationToken = default);
 
@@ -23,6 +24,16 @@ namespace SchoolProject.Services.Elasticsearch.Interfaces
         /// Indexes all schools.
         /// </summary>
         Task IndexSchoolsAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Indexes all courses.
+        /// </summary>
+        Task IndexCoursesAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Indexes all specializations.
+        /// </summary>
+        Task IndexSpecializationsAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Deletes the existing Elasticsearch index.

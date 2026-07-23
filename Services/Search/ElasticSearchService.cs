@@ -1,56 +1,61 @@
-using Microsoft.EntityFrameworkCore;
-using SchoolProject.Data;
 using SchoolProject.Models.Search;
+using SchoolProject.Services.Elasticsearch.Interfaces;
 
 namespace SchoolProject.Services.Search
 {
     public class ElasticSearchService : IElasticSearchService
     {
-        private readonly AppDbContext _context;
+        private readonly IElasticQueryService _elasticQueryService;
+        private readonly IElasticBulkIndexer _bulkIndexer;
 
-        public ElasticSearchService(AppDbContext context)
+        public ElasticSearchService(
+            IElasticQueryService elasticQueryService,
+            IElasticBulkIndexer bulkIndexer)
         {
-            _context = context;
+            _elasticQueryService = elasticQueryService;
+            _bulkIndexer = bulkIndexer;
         }
 
-        public async Task<IReadOnlyList<SearchResultViewModel>> SearchAsync(ElasticSearchRequest request, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<SearchResultViewModel>> SearchAsync(
+            ElasticSearchRequest request,
+            CancellationToken cancellationToken = default)
         {
-            // Phase 1 stub: keep SQL fallback while ES client is wired.
-            var q = (request.Query ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(q)) return new List<SearchResultViewModel>();
+            if (request == null || string.IsNullOrWhiteSpace(request.Query))
+                return new List<SearchResultViewModel>();
 
-            var words = q.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var result = await _elasticQueryService.SearchAsync(
+                request,
+                cancellationToken);
 
-            var schools = await _context.Schools
-                .Include(s => s.City)
-                .Where(s => s.IsActive)
-                .Where(s => words.All(w =>
-                    EF.Functions.Like(s.InstituteName!, "%" + w + "%") ||
-                    (s.Keyword != null && EF.Functions.Like(s.Keyword, "%" + w + "%")) ||
-                    (s.City != null && s.City.CityName != null && EF.Functions.Like(s.City.CityName, "%" + w + "%"))))
-                .Select(s => new SearchResultViewModel
+            return result.Results;
+        }
+
+        public async Task<IReadOnlyList<object>> AutoCompleteAsync(
+            string term,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return new List<object>();
+
+            var suggestions = await _elasticQueryService.AutoCompleteAsync(
+                term,
+                10,
+                cancellationToken);
+
+            return suggestions
+                .Select(s => (object)new
                 {
-                    Title = s.InstituteName ?? "",
-                    Url = "/school/" + s.InstituteSlug,
-                    Type = "School",
-                    Description = s.Address
+                    label = s.Label,
+                    value = s.Value,
+                    url = s.Url
                 })
-                .Take(request.Size)
-                .ToListAsync(cancellationToken);
-
-            return schools;
+                .ToList();
         }
 
-        public Task<IReadOnlyList<object>> AutoCompleteAsync(string term, CancellationToken cancellationToken = default)
+        public Task RebuildIndexAsync(
+            CancellationToken cancellationToken = default)
         {
-            IReadOnlyList<object> empty = new List<object>();
-            return Task.FromResult(empty);
-        }
-
-        public Task RebuildIndexAsync(CancellationToken cancellationToken = default)
-        {
-            // Phase 2: replace with actual indexing pipeline to ES.
-            return Task.CompletedTask;
+            return _bulkIndexer.RebuildIndexAsync(cancellationToken);
         }
     }
 }

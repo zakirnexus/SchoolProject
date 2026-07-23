@@ -25,8 +25,14 @@ namespace SchoolProject.Services.Elasticsearch
         {
             await DeleteIndexAsync(cancellationToken);
             await CreateIndexAsync(cancellationToken);
-            await IndexSchoolsAsync(cancellationToken);
-            await IndexCollegesAsync(cancellationToken);
+
+            // Build every entity type's documents in a single pass rather
+            // than calling IndexSchoolsAsync/IndexCollegesAsync/etc.
+            // separately, each of which would otherwise independently
+            // re-run BuildDocumentsAsync (and therefore re-run every EF
+            // query behind it) for a full rebuild.
+            var docs = await _builder.BuildDocumentsAsync(cancellationToken);
+            await IndexDocumentsAsync(docs, cancellationToken);
         }
 
         public async Task DeleteIndexAsync(
@@ -68,6 +74,30 @@ namespace SchoolProject.Services.Elasticsearch
                 cancellationToken);
         }
 
+        public async Task IndexCoursesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            await BulkIndexAsync(
+                SearchEntityType.Course,
+                cancellationToken);
+        }
+
+        public async Task IndexSpecializationsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            await BulkIndexAsync(
+                SearchEntityType.Specialization,
+                cancellationToken);
+        }
+
+        /// <summary>
+        /// Indexes just one entity type on its own (e.g. for a partial,
+        /// targeted reindex). Note this still calls BuildDocumentsAsync,
+        /// which builds documents for ALL entity types before filtering
+        /// down to the one requested here -- fine for an occasional,
+        /// targeted reindex, but RebuildIndexAsync deliberately avoids
+        /// calling this repeatedly for a full rebuild (see above).
+        /// </summary>
         private async Task BulkIndexAsync(
             SearchEntityType entityType,
             CancellationToken cancellationToken)
@@ -78,6 +108,13 @@ namespace SchoolProject.Services.Elasticsearch
                 .Where(x => x.EntityType == entityType)
                 .ToList();
 
+            await IndexDocumentsAsync(docs, cancellationToken);
+        }
+
+        private async Task IndexDocumentsAsync(
+            List<ElasticSearchDocument> docs,
+            CancellationToken cancellationToken)
+        {
             if (docs.Count == 0)
                 return;
 

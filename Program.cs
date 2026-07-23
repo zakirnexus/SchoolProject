@@ -13,6 +13,7 @@ using SchoolProject.Services.Elasticsearch.Interfaces;
 
 using SchoolProject.Services.Search.Interfaces;
 using SchoolProject.Services.Search.Implementations;
+using SchoolProject.Services.Search;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,8 @@ builder.Services.AddScoped<ISchoolSearchService, SchoolSearchService>();
 builder.Services.AddScoped<ICollegeSearchService, CollegeSearchService>();
 builder.Services.AddScoped<ISpecializationSearchService, SpecializationSearchService>();
 builder.Services.AddScoped<ICourseSearchService, CourseSearchService>();
+// Register concrete SearchIndexBuilder so it can be injected into ElasticBulkIndexer
+builder.Services.AddScoped<SearchIndexBuilder>();
 builder.Services.AddScoped<IElasticBulkIndexer, ElasticBulkIndexer>();
 builder.Services.AddScoped<IElasticQueryService, ElasticQueryService>();
 builder.Services.AddScoped<ICourseAliasResolver, CourseAliasResolver>();

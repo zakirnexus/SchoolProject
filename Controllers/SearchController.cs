@@ -1,37 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SchoolProject.Data;
 using SchoolProject.Models.Search;
-using SchoolProject.Services.Search.Interfaces;
+using SchoolProject.Services.Elasticsearch.Interfaces;
 
 namespace SchoolProject.Controllers
 {
     public class SearchController : Controller
     {
-        private readonly AppDbContext _context;
+        private const int PageSize = 25;
 
-        private readonly ISchoolSearchService _schoolSearchService;
-        private readonly ICollegeSearchService _collegeSearchService;
-        private readonly ICourseSearchService _courseSearchService;
-        private readonly ISpecializationSearchService _specializationSearchService;
+        private readonly IElasticQueryService _elasticQueryService;
 
-        public SearchController(
-            AppDbContext context,
-            ISchoolSearchService schoolSearchService,
-            ICollegeSearchService collegeSearchService,
-            ICourseSearchService courseSearchService,
-            ISpecializationSearchService specializationSearchService)
+        public SearchController(IElasticQueryService elasticQueryService)
         {
-            _context = context;
-            _schoolSearchService = schoolSearchService;
-            _collegeSearchService = collegeSearchService;
-            _courseSearchService = courseSearchService;
-            _specializationSearchService = specializationSearchService;
+            _elasticQueryService = elasticQueryService;
         }
 
-        public IActionResult Index(string q, int page = 1)
+        public async Task<IActionResult> Index(string q, int page = 1, CancellationToken cancellationToken = default)
         {
-            var results = new List<SearchResultViewModel>();
+            q = (q ?? string.Empty).Trim();
 
             if (string.IsNullOrWhiteSpace(q))
             {
@@ -41,155 +27,59 @@ namespace SchoolProject.Controllers
                 ViewBag.CollegeCount = 0;
                 ViewBag.CourseCount = 0;
                 ViewBag.SchoolCount = 0;
+                ViewBag.SpecializationCount = 0;
 
-                return View("IndexV2", results);
+                return View("IndexV2", new List<SearchResultViewModel>());
             }
 
-            q = q.Trim();
+            page = page < 1 ? 1 : page;
 
-            var words = q.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var request = new ElasticSearchRequest
+            {
+                Query = q,
+                Page = page,
+                Size = PageSize
+            };
 
-            // Schools
-            var schools = _schoolSearchService.Search(words);
-            results.AddRange(schools);
-
-            // Colleges
-            var colleges = _collegeSearchService.Search(words);
-            results.AddRange(colleges);
-
-            // Courses
-            var courses = _courseSearchService.Search(words);
-            results.AddRange(courses);
-
-            // Specializations
-            var specializations = _specializationSearchService.Search(words);
-            results.AddRange(specializations);
-
-            const int PageSize = 25;
-
-            results = results
-                .GroupBy(r => r.Url)
-                .Select(g =>
-                {
-                    // Prefer the result with the highest score.
-                    // If scores tie, prefer the one with a richer description.
-                    var best = g
-                        .OrderByDescending(x => x.Score)
-                        .ThenByDescending(x => x.Description?.Length ?? 0)
-                        .First();
-
-                    // CourseSearchService and SpecializationSearchService only
-                    // populate Title/Url/Type/Description/Score - they don't set
-                    // Logo, CampusImage, Address, etc. Since they can carry a
-                    // higher Score than CollegeSearchService/SchoolSearchService,
-                    // "best" above can end up being the sparse version even when
-                    // a richer duplicate exists in the same group.
-                    // Backfill the display fields from whichever duplicate
-                    // actually has them (identified here by a non-zero InstituteId,
-                    // since only CollegeSearchService/SchoolSearchService set it).
-                    var richest = g.FirstOrDefault(x => x.InstituteId != 0) ?? best;
-
-                    if (!ReferenceEquals(best, richest))
-                    {
-                        best.InstituteId = richest.InstituteId;
-                        best.Logo ??= richest.Logo;
-                        best.CampusImage ??= richest.CampusImage;
-                        best.Address ??= richest.Address;
-                        best.Website ??= richest.Website;
-                        best.Phone ??= richest.Phone;
-                        best.Ownership ??= richest.Ownership;
-                        best.EstablishedYear ??= richest.EstablishedYear;
-
-                        if (string.IsNullOrWhiteSpace(best.Accreditation))
-                            best.Accreditation = richest.Accreditation;
-
-                        best.Sponsored = best.Sponsored || richest.Sponsored;
-
-                        if (best.ListingRank == 0)
-                            best.ListingRank = richest.ListingRank;
-                    }
-
-                    return best;
-                })
-                .OrderByDescending(r => r.Score)
-                .ThenBy(r => r.Type)
-                .ThenBy(r => r.Title)
-                .ToList();
-
-            var totalResults = results.Count;
+            // A single Elasticsearch query now does everything the old code
+            // needed four separate SQL-based services (School/College/Course/
+            // Specialization) plus a manual GroupBy-and-merge pass to
+            // accomplish: full-text matching, relevance + boost ranking,
+            // pagination, and per-type counts. The search index already has
+            // one canonical, fully-populated document per entity, so there's
+            // no duplicate-result merging to do here anymore.
+            var result = await _elasticQueryService.SearchAsync(request, cancellationToken);
 
             ViewBag.Query = q;
-            ViewBag.ResultCount = totalResults;
+            ViewBag.ResultCount = result.Total;
 
-            ViewBag.CollegeCount = results.Count(r => r.Type == "College");
-            ViewBag.SchoolCount = results.Count(r => r.Type == "School");
-            ViewBag.CourseCount = results.Count(r => r.Type == "Course");
-            ViewBag.SpecializationCount = results.Count(r => r.Type == "Specialization");
+            ViewBag.CollegeCount = result.FacetCounts.GetValueOrDefault(nameof(SearchEntityType.College));
+            ViewBag.SchoolCount = result.FacetCounts.GetValueOrDefault(nameof(SearchEntityType.School));
+            ViewBag.CourseCount = result.FacetCounts.GetValueOrDefault(nameof(SearchEntityType.Course));
+            ViewBag.SpecializationCount = result.FacetCounts.GetValueOrDefault(nameof(SearchEntityType.Specialization));
+
             ViewBag.Page = page;
             ViewBag.PageSize = PageSize;
-            ViewBag.TotalResults = totalResults;
-            ViewBag.TotalPages = (int)Math.Ceiling(totalResults / (double)PageSize);
+            ViewBag.TotalResults = result.Total;
+            ViewBag.TotalPages = (int)Math.Ceiling(result.Total / (double)PageSize);
 
-            var pagedResults = results
-                .Skip((page - 1) * PageSize)
-                .Take(PageSize)
-                .ToList();
-
-            return View("IndexV2", pagedResults);
+            return View("IndexV2", result.Results);
         }
 
         [HttpGet]
-        public IActionResult AutoComplete(string term)
+        public async Task<IActionResult> AutoComplete(string term, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(term))
                 return Json(new List<object>());
 
-            term = term.Trim();
+            var suggestions = await _elasticQueryService.AutoCompleteAsync(term.Trim(), 10, cancellationToken);
 
-            var schoolResults = _context.Schools
-                .Where(s =>
-                    EF.Functions.Like(s.InstituteName, "%" + term + "%")
-                )
-                .Select(s => new
-                {
-                    label = s.InstituteName + " (School)",
-                    value = s.InstituteName,
-                    url = "/school/" + s.InstituteSlug
-                })
-                .Take(5)
-                .ToList();
-
-            var collegeResults = _context.Colleges
-                .Where(c =>
-                    EF.Functions.Like(c.InstituteName, "%" + term + "%")
-                )
-                .Select(c => new
-                {
-                    label = c.InstituteName + " (College)",
-                    value = c.InstituteName,
-                    url = "/college/" + c.InstituteSlug
-                })
-                .Take(5)
-                .ToList();
-
-            var courseResults = _context.Courses
-                .Where(c =>
-                    EF.Functions.Like(c.CourseName, "%" + term + "%")
-                )
-                .Select(c => new
-                {
-                    label = c.CourseName + " (Course)",
-                    value = c.CourseName,
-                    url = "/courses/" + c.CourseSlug
-                })
-                .Take(5)
-                .ToList();
-
-            var results = schoolResults
-                .Concat(collegeResults)
-                .Concat(courseResults)
-                .Take(10)
-                .ToList();
+            var results = suggestions.Select(s => new
+            {
+                label = s.Label,
+                value = s.Value,
+                url = s.Url
+            });
 
             return Json(results);
         }

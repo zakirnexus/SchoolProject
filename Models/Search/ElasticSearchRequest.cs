@@ -8,6 +8,7 @@ namespace SchoolProject.Models.Search
         public string? LocalitySlug { get; set; }
         public string? NsewcName { get; set; }
         public string? SyllabusSlug { get; set; }
+        public int Page { get; set; } = 1;
         public int Size { get; set; } = 20;
     }
 }
